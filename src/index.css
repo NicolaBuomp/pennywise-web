@@ -1,0 +1,42 @@
+@import "tailwindcss";
+
+@theme {
+  /* Variabili di default (Tema Chiaro) */
+  --color-primary: var(--theme-color-primary);
+  --color-secondary: var(--theme-color-secondary);
+  --color-accent: var(--theme-color-accent);
+
+  --color-bg: var(--theme-color-bg);
+  --color-bg-soft: var(--theme-color-bg-soft);
+  --color-text: var(--theme-color-text);
+  --color-text-soft: var(--theme-color-text-soft);
+  --color-border: var(--theme-color-border);
+}
+
+@layer base {
+  :root {
+    /* 🌞 Tema Chiaro (Default) */
+    --theme-color-primary: #10b981; /* Verde brillante */
+    --theme-color-secondary: #f3f4f6; /* Grigio molto chiaro per input */
+    --theme-color-accent: #16a34a; /* Verde leggermente più scuro */
+
+    --theme-color-bg: #ffffff; /* Bianco */
+    --theme-color-bg-soft: #f9fafb; /* Grigio chiarissimo */
+    --theme-color-text: #1f2937; /* Grigio scuro per il testo */
+    --theme-color-text-soft: #6b7280; /* Grigio più tenue */
+    --theme-color-border: #e5e7eb; /* Grigio chiaro per i bordi */
+  }
+
+  [class="dark"] {
+    /* 🌙 Tema Scuro */
+    --theme-color-primary: #10b981; /* Verde invariato */
+    --theme-color-secondary: #374151; /* Grigio scuro per input */
+    --theme-color-accent: #16a34a; /* Verde leggermente più scuro */
+
+    --theme-color-bg: #1f2937; /* Grigio scuro */
+    --theme-color-bg-soft: #111827; /* Grigio più scuro */
+    --theme-color-text: #f9fafb; /* Testo chiaro */
+    --theme-color-text-soft: #9ca3af; /* Testo grigio più morbido */
+    --theme-color-border: #374151; /* Bordo scuro */
+  }
+}
