@@ -12,6 +12,7 @@
   "dependencies": {
     "@reduxjs/toolkit": "^2.6.0",
     "@supabase/supabase-js": "^2.49.1",
+    "@tailwindcss/vite": "^4.0.9",
     "axios": "^1.7.9",
     "date-fns": "^4.1.0",
     "react": "^19.0.0",
