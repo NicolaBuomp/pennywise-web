@@ -1,51 +1,61 @@
 // src/pages/Login.tsx
-import { useState, FormEvent } from 'react';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useState, FormEvent, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { signIn, signInWithGoogle, resetAuthError } from '../store/auth/authSlice';
-import { RootState } from '../store/store';
+import { signIn, signInWithGoogle, resetAuthError } from '../store/auth/authSlice.ts';
+import { RootState, AppDispatch } from '../store/store.ts';
 
 const Login = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const dispatch = useDispatch();
+    const [rememberMe, setRememberMe] = useState(false);
+
+    const dispatch = useDispatch<AppDispatch>();
     const navigate = useNavigate();
-    const location = useLocation();
 
     // Recupera lo stato di autenticazione dal redux store
-    const { loading, error } = useSelector((state: RootState) => state.auth);
+    const { loading, error, user } = useSelector((state: RootState) => state.auth);
 
-    // Determina dove reindirizzare dopo il login
-    const from = location.state?.from?.pathname || '/dashboard';
+    // Reindirizza se già autenticato
+    useEffect(() => {
+        if (user) {
+            navigate('/dashboard');
+        }
+    }, [user, navigate]);
 
     // Resetta gli errori quando il componente viene montato
-    useSelector(() => {
+    useEffect(() => {
         dispatch(resetAuthError());
     }, [dispatch]);
 
-    const handleSubmit = async (e: FormEvent) => {
+    const handleEmailLogin = async (e: FormEvent) => {
         e.preventDefault();
 
-        if (!email || !password) {
-            return;
-        }
+        try {
+            const result = await dispatch(signIn({ email, password }));
 
-        const result = await dispatch(signIn({ email, password }));
-
-        if (signIn.fulfilled.match(result)) {
-            navigate(from, { replace: true });
+            if (signIn.fulfilled.match(result)) {
+                // Reindirizza alla dashboard in caso di successo
+                navigate('/dashboard');
+            }
+        } catch (err) {
+            console.error('Errore durante il login:', err);
         }
     };
 
     const handleGoogleLogin = async () => {
-        await dispatch(signInWithGoogle());
-        // Il redirect viene gestito da Supabase OAuth
+        try {
+            await dispatch(signInWithGoogle());
+            // Il reindirizzamento verrà gestito nel flusso OAuth
+        } catch (err) {
+            console.error('Errore durante il login con Google:', err);
+        }
     };
 
     return (
-        <div className="min-h-screen flex justify-center items-center bg-background-light dark:bg-background-dark">
-            <div className="max-w-md w-full p-6 rounded-lg shadow-lg bg-surface-light dark:bg-surface-dark">
-                <h1 className="text-2xl font-bold mb-6 text-center text-text-primary-light dark:text-text-primary-dark">Accedi a Pennywise</h1>
+        <div className="min-h-screen flex justify-center items-center bg-gray-50 py-8 px-4">
+            <div className="max-w-md w-full p-6 rounded-lg shadow-lg bg-white">
+                <h1 className="text-2xl font-bold mb-6 text-center text-gray-900">Accedi al tuo account</h1>
 
                 {error && (
                     <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">
@@ -53,11 +63,11 @@ const Login = () => {
                     </div>
                 )}
 
-                <form onSubmit={handleSubmit}>
-                    <div className="mb-4">
+                <form onSubmit={handleEmailLogin} className="space-y-4">
+                    <div>
                         <label
                             htmlFor="email"
-                            className="block mb-2 text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
+                            className="block mb-1 text-sm font-medium text-gray-700"
                         >
                             Email
                         </label>
@@ -66,15 +76,15 @@ const Login = () => {
                             id="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full p-2.5 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark"
+                            className="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary"
                             required
                         />
                     </div>
 
-                    <div className="mb-6">
+                    <div>
                         <label
                             htmlFor="password"
-                            className="block mb-2 text-sm font-medium text-text-primary-light dark:text-text-primary-dark"
+                            className="block mb-1 text-sm font-medium text-gray-700"
                         >
                             Password
                         </label>
@@ -83,9 +93,31 @@ const Login = () => {
                             id="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full p-2.5 rounded-lg border border-border-light dark:border-border-dark bg-background-light dark:bg-background-dark text-text-primary-light dark:text-text-primary-dark"
+                            className="w-full p-2.5 rounded-lg border border-gray-300 focus:ring-2 focus:ring-primary focus:border-primary"
                             required
                         />
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center">
+                            <input
+                                id="remember-me"
+                                name="remember-me"
+                                type="checkbox"
+                                checked={rememberMe}
+                                onChange={(e) => setRememberMe(e.target.checked)}
+                                className="h-4 w-4 text-primary focus:ring-primary border-gray-300 rounded"
+                            />
+                            <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
+                                Ricordami
+                            </label>
+                        </div>
+
+                        <div className="text-sm">
+                            <Link to="/password-reset" className="font-medium text-primary hover:text-primary-dark">
+                                Password dimenticata?
+                            </Link>
+                        </div>
                     </div>
 
                     <button
@@ -97,38 +129,40 @@ const Login = () => {
                     </button>
                 </form>
 
-                <div className="mt-4 text-center">
-                    <span className="text-text-secondary-light dark:text-text-secondary-dark">oppure</span>
+                <div className="mt-6">
+                    <div className="relative">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-300"></div>
+                        </div>
+                        <div className="relative flex justify-center text-sm">
+                            <span className="px-2 bg-white text-gray-500">
+                                Oppure continua con
+                            </span>
+                        </div>
+                    </div>
+
+                    <div className="mt-6">
+                        <button
+                            type="button"
+                            onClick={handleGoogleLogin}
+                            disabled={loading}
+                            className="w-full flex justify-center items-center py-2.5 px-5 border border-gray-300 rounded-lg shadow-sm bg-white hover:bg-gray-50 focus:ring-4 focus:ring-primary-light disabled:opacity-70"
+                        >
+                            <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                                <g transform="matrix(1, 0, 0, 1, 27.009001, -39.238998)">
+                                    <path fill="#4285F4" d="M -3.264 51.509 C -3.264 50.719 -3.334 49.969 -3.454 49.239 L -14.754 49.239 L -14.754 53.749 L -8.284 53.749 C -8.574 55.229 -9.424 56.479 -10.684 57.329 L -10.684 60.329 L -6.824 60.329 C -4.564 58.239 -3.264 55.159 -3.264 51.509 Z" />
+                                    <path fill="#34A853" d="M -14.754 63.239 C -11.514 63.239 -8.804 62.159 -6.824 60.329 L -10.684 57.329 C -11.764 58.049 -13.134 58.489 -14.754 58.489 C -17.884 58.489 -20.534 56.379 -21.484 53.529 L -25.464 53.529 L -25.464 56.619 C -23.494 60.539 -19.444 63.239 -14.754 63.239 Z" />
+                                    <path fill="#FBBC05" d="M -21.484 53.529 C -21.734 52.809 -21.864 52.039 -21.864 51.239 C -21.864 50.439 -21.724 49.669 -21.484 48.949 L -21.484 45.859 L -25.464 45.859 C -26.284 47.479 -26.754 49.299 -26.754 51.239 C -26.754 53.179 -26.284 54.999 -25.464 56.619 L -21.484 53.529 Z" />
+                                    <path fill="#EA4335" d="M -14.754 43.989 C -12.984 43.989 -11.404 44.599 -10.154 45.789 L -6.734 42.369 C -8.804 40.429 -11.514 39.239 -14.754 39.239 C -19.444 39.239 -23.494 41.939 -25.464 45.859 L -21.484 48.949 C -20.534 46.099 -17.884 43.989 -14.754 43.989 Z" />
+                                </g>
+                            </svg>
+                            Google
+                        </button>
+                    </div>
                 </div>
 
-                <button
-                    onClick={handleGoogleLogin}
-                    disabled={loading}
-                    className="w-full mt-4 bg-white text-gray-700 font-medium rounded-lg py-2.5 px-5 text-center border border-gray-300 hover:bg-gray-100 focus:ring-4 focus:ring-gray-200 disabled:opacity-70 flex items-center justify-center"
-                >
-                    <svg className="w-5 h-5 mr-2" viewBox="0 0 24 24">
-                        <path
-                            fill="#4285F4"
-                            d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                        />
-                        <path
-                            fill="#34A853"
-                            d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                        />
-                        <path
-                            fill="#FBBC05"
-                            d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                        />
-                        <path
-                            fill="#EA4335"
-                            d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                        />
-                    </svg>
-                    Accedi con Google
-                </button>
-
                 <div className="mt-6 text-center">
-                    <p className="text-sm text-text-secondary-light dark:text-text-secondary-dark">
+                    <p className="text-sm text-gray-600">
                         Non hai un account?{' '}
                         <Link to="/register" className="text-primary hover:underline">
                             Registrati
