@@ -11,32 +11,68 @@
   --color-text: var(--theme-color-text);
   --color-text-soft: var(--theme-color-text-soft);
   --color-border: var(--theme-color-border);
+
+  /* Variabili per l'effetto Glassmorphism */
+  --glass-bg: var(--theme-glass-bg);
+  --glass-border: var(--theme-glass-border);
+  --glass-shadow: var(--theme-glass-shadow);
+  --glass-blur: var(--theme-glass-blur);
 }
 
 @layer base {
   :root {
-    /* 🌞 Tema Chiaro (Default) */
-    --theme-color-primary: #10b981; /* Verde brillante */
+    /* 🌞 Tema Chiaro (Default) - Rosso Corallo */
+    --theme-color-primary: #F97A6B; /* Rosso corallo */
     --theme-color-secondary: #f3f4f6; /* Grigio molto chiaro per input */
-    --theme-color-accent: #16a34a; /* Verde leggermente più scuro */
+    --theme-color-accent: #FF9F7A; /* Corallo più caldo/arancione */
 
     --theme-color-bg: #ffffff; /* Bianco */
     --theme-color-bg-soft: #f9fafb; /* Grigio chiarissimo */
     --theme-color-text: #1f2937; /* Grigio scuro per il testo */
     --theme-color-text-soft: #6b7280; /* Grigio più tenue */
     --theme-color-border: #e5e7eb; /* Grigio chiaro per i bordi */
+
+    /* Glassmorphism - Tema Chiaro */
+    --theme-glass-bg: rgba(255, 255, 255, 0.7);
+    --theme-glass-border: rgba(255, 255, 255, 0.8);
+    --theme-glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.05);
+    --theme-glass-blur: blur(10px);
   }
 
   [class="dark"] {
-    /* 🌙 Tema Scuro */
-    --theme-color-primary: #10b981; /* Verde invariato */
+    /* 🌙 Tema Scuro - Rosso Corallo */
+    --theme-color-primary: #FF8A7E; /* Rosso corallo più luminoso */
     --theme-color-secondary: #374151; /* Grigio scuro per input */
-    --theme-color-accent: #16a34a; /* Verde leggermente più scuro */
+    --theme-color-accent: #FFAC8C; /* Corallo-arancio più luminoso */
 
     --theme-color-bg: #1f2937; /* Grigio scuro */
     --theme-color-bg-soft: #111827; /* Grigio più scuro */
     --theme-color-text: #f9fafb; /* Testo chiaro */
     --theme-color-text-soft: #9ca3af; /* Testo grigio più morbido */
     --theme-color-border: #374151; /* Bordo scuro */
+
+    /* Glassmorphism - Tema Scuro */
+    --theme-glass-bg: rgba(31, 41, 55, 0.7);
+    --theme-glass-border: rgba(255, 255, 255, 0.1);
+    --theme-glass-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+    --theme-glass-blur: blur(10px);
+  }
+}
+
+/* Utility classes per l'effetto glassmorphism */
+@layer utilities {
+  .glass {
+    background-color: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    border: 1px solid var(--glass-border);
+    box-shadow: var(--glass-shadow);
+  }
+
+  .glass-no-border {
+    background-color: var(--glass-bg);
+    backdrop-filter: var(--glass-blur);
+    -webkit-backdrop-filter: var(--glass-blur);
+    box-shadow: var(--glass-shadow);
   }
 }

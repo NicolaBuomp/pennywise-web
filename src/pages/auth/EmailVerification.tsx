@@ -1,20 +1,60 @@
 // src/pages/auth/EmailVerification.tsx
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '../../store/store';
-import { signOut } from '../../store/auth/authSlice';
-import { supabase } from '../../lib/supabase';
+import {useEffect, useState} from 'react';
+import {Link, useNavigate} from 'react-router-dom';
+import {useDispatch} from 'react-redux';
+import {AppDispatch} from '../../store/store';
+import {signOut} from '../../store/auth/authSlice';
+import {supabase} from '../../lib/supabase';
+import useAuthStatus from '../../hooks/useAuthStatus';
 
 const EmailVerification = () => {
-    const { user } = useSelector((state: RootState) => state.auth);
+    const {user, isEmailVerified, refreshStatus} = useAuthStatus();
     const [isResending, setIsResending] = useState(false);
     const [resendSuccess, setResendSuccess] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [cooldownTime, setCooldownTime] = useState(0);
     const [cooldownActive, setCooldownActive] = useState(false);
+    const [checkingInterval, setCheckingInterval] = useState<number | null>(null);
     const navigate = useNavigate();
     const dispatch = useDispatch<AppDispatch>();
+
+    // Se l'email è verificata, reindirizza alla dashboard
+    useEffect(() => {
+        if (isEmailVerified) {
+            navigate('/dashboard');
+        }
+    }, [isEmailVerified, navigate]);
+
+    // Stato per tracciare la verifica manuale
+    const [isChecking, setIsChecking] = useState(false);
+
+    // Funzione per verificare manualmente lo stato di verifica
+    const handleCheckVerification = () => {
+        setIsChecking(true);
+        refreshStatus();
+
+        // Nascondi l'indicatore dopo 2 secondi
+        setTimeout(() => {
+            setIsChecking(false);
+        }, 2000);
+    };
+
+    // Imposta un controllo periodico dello stato di verifica
+    useEffect(() => {
+        // Verifica ogni 30 secondi se l'email è stata verificata
+        const interval = window.setInterval(() => {
+            console.log('Checking email verification status...');
+            refreshStatus();
+        }, 30000); // 30 secondi
+
+        setCheckingInterval(interval);
+
+        return () => {
+            if (interval) {
+                clearInterval(interval);
+            }
+        };
+    }, [refreshStatus]);
 
     // Gestisce il countdown del cooldown
     useEffect(() => {
@@ -47,7 +87,7 @@ const EmailVerification = () => {
             setIsResending(true);
             setError(null);
 
-            const { error } = await supabase.auth.resend({
+            const {error} = await supabase.auth.resend({
                 type: 'signup',
                 email: user.email,
             });
@@ -106,20 +146,25 @@ const EmailVerification = () => {
                         {user?.email}
                     </p>
                     <p className="text-gray-600 mb-8">
-                        Per accedere all'applicazione, devi prima verificare il tuo indirizzo email cliccando sul link nell'email che ti abbiamo inviato.
+                        Per accedere all'applicazione, devi prima verificare il tuo indirizzo email cliccando sul link
+                        nell'email che ti abbiamo inviato.
                     </p>
 
                     {error && (
-                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4"
+                             role="alert">
                             <span className="block sm:inline">{error}</span>
                         </div>
                     )}
 
+
                     {resendSuccess && (
-                        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-              <span className="block sm:inline">
-                Email di verifica inviata con successo! Controlla la tua casella di posta.
-              </span>
+                        <div
+                            className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4"
+                            role="alert">
+                              <span className="block sm:inline">
+                                Email di verifica inviata con successo! Controlla la tua casella di posta.
+                              </span>
                         </div>
                     )}
 
@@ -128,7 +173,7 @@ const EmailVerification = () => {
                             <div className="relative pt-1">
                                 <div className="overflow-hidden h-2 mb-1 text-xs flex rounded bg-gray-200">
                                     <div
-                                        style={{ width: `${(cooldownTime / 60) * 100}%` }}
+                                        style={{width: `${(cooldownTime / 60) * 100}%`}}
                                         className="shadow-none flex flex-col text-center whitespace-nowrap text-white justify-center bg-primary transition-all duration-500"
                                     ></div>
                                 </div>
@@ -139,39 +184,77 @@ const EmailVerification = () => {
                         </div>
                     )}
 
-                    <div className="flex flex-col sm:flex-row justify-center gap-4">
+                    <div className="mb-4 text-center">
                         <button
-                            onClick={handleResendEmail}
-                            disabled={isResending || cooldownActive}
-                            className="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
+                            onClick={handleCheckVerification}
+                            disabled={isChecking}
+                            className="text-primary hover:underline text-sm flex items-center justify-center mx-auto"
                         >
-                            {isResending ? (
+                            {isChecking ? (
                                 <>
-                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-primary"
+                                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                                strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor"
+                                              d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
-                                    Invio in corso...
-                                </>
-                            ) : cooldownActive ? (
-                                <>
-                                    <svg className="-ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                    Riprova tra {cooldownTime} secondi
+                                    Verificando...
                                 </>
                             ) : (
-                                'Invia nuovamente l\'email'
+                                "Ho già confermato l'email. Verifica ora →"
                             )}
-                        </button>
-                        <button
-                            onClick={handleLogout}
-                            className="inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                        >
-                            Torna al login
                         </button>
                     </div>
                 </div>
+            </div>
+
+
+            <div className="flex flex-col sm:flex-row justify-center gap-4">
+                <button
+                    onClick={handleResendEmail}
+                    disabled={isResending || cooldownActive}
+                    className="inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-primary-dark focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary disabled:opacity-50"
+                >
+                    {isResending ? (
+                        <>
+                            <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                                 xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                        strokeWidth="4"></circle>
+                                <path className="opacity-75" fill="currentColor"
+                                      d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Invio in corso...
+                        </>
+                    ) : cooldownActive ? (
+                        <>
+                            <svg className="-ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg"
+                                 fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                            Riprova tra {cooldownTime} secondi
+                        </>
+                    ) : (
+                        'Invia nuovamente l\'email'
+                    )}
+                </button>
+                <button
+                    onClick={handleLogout}
+                    className="inline-flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                >
+                    Torna al login
+                </button>
+            </div>
+
+            <div className="mt-6 text-center">
+                <p className="text-sm text-gray-600">
+                    Il link nell'email non funziona?{' '}
+                    <Link to="/verify-email-manual" className="text-primary hover:underline">
+                        Prova la verifica manuale
+                    </Link>
+                </p>
             </div>
         </div>
     );

@@ -1,4 +1,3 @@
-// src/pages/auth/EmailConfirmed.tsx
 import { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
@@ -65,9 +64,3 @@ const EmailConfirmed = () => {
 };
 
 export default EmailConfirmed;
-
-// Add this to your global CSS or in a <style> tag
-// @keyframes progress {
-//   from { width: 0% }
-//   to { width: 100% }
-// }

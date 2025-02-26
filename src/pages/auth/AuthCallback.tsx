@@ -22,11 +22,32 @@ const AuthCallback = () => {
         const handleAuthCallback = async () => {
             try {
                 setLoading(true);
-                console.log('Auth callback - Processing URL:', window.location.href);
+
+                // Log completo dell'URL per debugging
+                const fullUrl = window.location.href;
+                console.log('Auth callback - Full URL:', fullUrl);
+
+                // Salva l'URL completo nel localStorage per debug
+                localStorage.setItem('last_auth_callback_url', fullUrl);
 
                 // Ottieni tutti i parametri dalla URL
                 const hashParams = new URLSearchParams(window.location.hash.substring(1));
                 const queryParams = new URLSearchParams(window.location.search);
+
+                // Log di tutti i parametri
+                console.log('Auth callback - Query params:',
+                    Array.from(queryParams.entries()).reduce((obj, [key, val]) => {
+                        obj[key] = val;
+                        return obj;
+                    }, {} as Record<string, string>)
+                );
+
+                console.log('Auth callback - Hash params:',
+                    Array.from(hashParams.entries()).reduce((obj, [key, val]) => {
+                        obj[key] = val;
+                        return obj;
+                    }, {} as Record<string, string>)
+                );
 
                 // Verifica se è presente un token di accesso (OAuth)
                 const accessToken = hashParams.get('access_token');
@@ -47,22 +68,48 @@ const AuthCallback = () => {
                 if (emailToken) {
                     setMessage('Verificando la tua email...');
 
-                    // Con alcuni provider email, il token potrebbe essere nella query string o nell'hash
-                    // Impostiamo il recupero automatico nella URL
-                    const { error } = await supabase.auth.refreshSession();
+                    // Tenta di recuperare l'accesso token dalla query
+                    const type = queryParams.get('type');
 
-                    if (error) {
-                        console.error('Email verification error:', error);
-                        setError('Errore durante la verifica dell\'email. Il link potrebbe essere scaduto.');
-                    } else {
-                        // Ottieni la sessione aggiornata
-                        await dispatch(getSession());
-                        setMessage('Email verificata con successo! Redirecting...');
+                    try {
+                        // Con alcuni provider email, il token potrebbe essere nella query string o nell'hash
+                        // Impostiamo il recupero automatico nella URL
+                        const { error } = await supabase.auth.refreshSession();
 
-                        // Reindirizza alla pagina di conferma
+                        if (error) {
+                            console.error('Email verification error:', error);
+
+                            // Conserva il token per la verifica manuale
+                            localStorage.setItem('verification_token', emailToken);
+                            localStorage.setItem('verification_type', type || 'signup');
+
+                            setError('Errore durante la verifica dell\'email. Prova con la verifica manuale.');
+
+                            // Reindirizza alla verifica manuale dopo 3 secondi
+                            setTimeout(() => {
+                                navigate('/verify-email-manual');
+                            }, 3000);
+                            return;
+                        } else {
+                            // Ottieni la sessione aggiornata
+                            await dispatch(getSession());
+                            setMessage('Email verificata con successo! Redirecting...');
+
+                            // Reindirizza alla pagina di conferma
+                            setTimeout(() => {
+                                navigate('/email-confirmed');
+                            }, 2000);
+                            return;
+                        }
+                    } catch (verifyError) {
+                        console.error('Error during email verification:', verifyError);
+                        localStorage.setItem('verification_error', JSON.stringify(verifyError));
+                        setError('Si è verificato un errore tecnico durante la verifica. Prova con la verifica manuale.');
+
+                        // Reindirizza alla verifica manuale dopo 3 secondi
                         setTimeout(() => {
-                            navigate('/email-confirmed');
-                        }, 2000);
+                            navigate('/verify-email-manual');
+                        }, 3000);
                         return;
                     }
                 }

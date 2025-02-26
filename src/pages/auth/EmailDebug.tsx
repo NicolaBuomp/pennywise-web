@@ -1,12 +1,22 @@
 // src/pages/auth/EmailDebug.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
+import { getAuthDebugInfo, clearAuthDebugInfo, extractTokenFromUrl } from '../../utils/authUtils';
 
 const EmailDebug = () => {
     const [email, setEmail] = useState('');
     const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>('idle');
     const [message, setMessage] = useState('');
     const [debugInfo, setDebugInfo] = useState<any>(null);
+    const [authDebugInfo, setAuthDebugInfo] = useState<any[]>([]);
+    const [manualUrl, setManualUrl] = useState('');
+    const [manualTokenResult, setManualTokenResult] = useState<string | null>(null);
+
+    // Carica i dati di debug al caricamento della pagina
+    useEffect(() => {
+        const debugData = getAuthDebugInfo();
+        setAuthDebugInfo(debugData);
+    }, []);
 
     const handleSendVerificationEmail = async () => {
         if (!email) return;
@@ -65,6 +75,26 @@ const EmailDebug = () => {
             setMessage('Errore durante il test dell\'URL di callback');
             setDebugInfo(error);
         }
+    };
+
+    const handleExtractToken = () => {
+        if (!manualUrl) return;
+
+        try {
+            const token = extractTokenFromUrl(manualUrl);
+            setManualTokenResult(token);
+        } catch (error) {
+            console.error('Error extracting token:', error);
+            setManualTokenResult('Errore nell\'estrazione del token');
+        }
+    };
+
+    const handleClearDebugData = () => {
+        clearAuthDebugInfo();
+        setAuthDebugInfo([]);
+        setDebugInfo(null);
+        setStatus('idle');
+        setMessage('Dati di debug cancellati');
     };
 
     return (
@@ -133,6 +163,63 @@ const EmailDebug = () => {
                         <li>Controlla la console del browser per eventuali errori durante il processo di conferma</li>
                     </ul>
                 </div>
+
+                <div className="mt-6 border-t border-gray-200 pt-4">
+                    <h2 className="text-lg font-medium text-gray-900 mb-4">Estrazione Token</h2>
+
+                    <div className="mb-4">
+                        <label htmlFor="manual-url" className="block text-sm font-medium text-gray-700 mb-1">
+                            URL dal link di verifica email
+                        </label>
+                        <input
+                            type="text"
+                            id="manual-url"
+                            value={manualUrl}
+                            onChange={(e) => setManualUrl(e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-primary focus:border-primary"
+                            placeholder="Incolla qui l'URL completo dall'email"
+                        />
+                    </div>
+
+                    <div className="flex space-x-4 mb-4">
+                        <button
+                            onClick={handleExtractToken}
+                            disabled={!manualUrl}
+                            className="bg-gray-600 text-white py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium hover:bg-gray-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500 disabled:opacity-50"
+                        >
+                            Estrai Token
+                        </button>
+
+                        <button
+                            onClick={handleClearDebugData}
+                            className="bg-red-600 text-white py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                        >
+                            Cancella Dati Debug
+                        </button>
+                    </div>
+
+                    {manualTokenResult && (
+                        <div className="bg-gray-100 p-4 rounded-md overflow-auto">
+                            <p className="font-medium text-sm">Token estratto:</p>
+                            <p className="text-xs mt-1 break-all">{manualTokenResult}</p>
+                        </div>
+                    )}
+                </div>
+
+                {authDebugInfo && authDebugInfo.length > 0 && (
+                    <div className="mt-6 border-t border-gray-200 pt-4">
+                        <h2 className="text-lg font-medium text-gray-900 mb-2">Storico Debug</h2>
+
+                        {authDebugInfo.map((item, index) => (
+                            <div key={index} className="mb-4 bg-gray-50 p-3 rounded-md">
+                                <p className="text-xs text-gray-500">{new Date(item.timestamp).toLocaleString()}</p>
+                                <pre className="mt-2 bg-gray-100 p-2 rounded-md overflow-auto text-xs">
+                  {JSON.stringify(item, null, 2)}
+                </pre>
+                            </div>
+                        ))}
+                    </div>
+                )}
             </div>
         </div>
     );
