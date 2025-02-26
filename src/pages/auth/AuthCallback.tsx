@@ -1,10 +1,10 @@
 // src/pages/auth/AuthCallback.tsx
-import { useEffect, useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { supabase } from '../../lib/supabase';
-import { getSession } from '../../store/auth/authSlice';
-import { AppDispatch } from '../../store/store';
+import {useEffect, useState} from 'react';
+import {useLocation, useNavigate} from 'react-router-dom';
+import {useDispatch} from 'react-redux';
+import {supabase} from '../../lib/supabase';
+import {getSession} from '../../store/auth/authSlice';
+import {ensureProfile} from '../../store/profile/profileSlice';
 
 /**
  * Pagina di callback per l'autenticazione OAuth e la verifica email.
@@ -13,7 +13,7 @@ import { AppDispatch } from '../../store/store';
 const AuthCallback = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const dispatch = useDispatch<AppDispatch>();
+    const dispatch = useDispatch();
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState<string | null>(null);
@@ -42,13 +42,6 @@ const AuthCallback = () => {
                     }, {} as Record<string, string>)
                 );
 
-                console.log('Auth callback - Hash params:',
-                    Array.from(hashParams.entries()).reduce((obj, [key, val]) => {
-                        obj[key] = val;
-                        return obj;
-                    }, {} as Record<string, string>)
-                );
-
                 // Verifica se è presente un token di accesso (OAuth)
                 const accessToken = hashParams.get('access_token');
                 const refreshToken = queryParams.get('refresh_token');
@@ -68,13 +61,9 @@ const AuthCallback = () => {
                 if (emailToken) {
                     setMessage('Verificando la tua email...');
 
-                    // Tenta di recuperare l'accesso token dalla query
-                    const type = queryParams.get('type');
-
                     try {
                         // Con alcuni provider email, il token potrebbe essere nella query string o nell'hash
-                        // Impostiamo il recupero automatico nella URL
-                        const { error } = await supabase.auth.refreshSession();
+                        const {error} = await supabase.auth.refreshSession();
 
                         if (error) {
                             console.error('Email verification error:', error);
@@ -119,7 +108,7 @@ const AuthCallback = () => {
                     setMessage('Completando l\'autenticazione...');
 
                     // Gestisci il token PKCE (Authorization Code Flow con PKCE)
-                    const { error } = await supabase.auth.refreshSession();
+                    const {error} = await supabase.auth.refreshSession();
 
                     if (error) {
                         console.error('OAuth callback error:', error);
@@ -127,6 +116,11 @@ const AuthCallback = () => {
                     } else {
                         // Aggiorna la sessione nello store
                         await dispatch(getSession());
+
+                        // Assicura che il profilo esista
+                        dispatch(ensureProfile());
+
+                        // Reindirizza alla dashboard
                         navigate('/dashboard');
                         return;
                     }

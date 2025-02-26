@@ -5,6 +5,7 @@ import {Provider, useDispatch} from 'react-redux';
 import {PersistGate} from 'redux-persist/integration/react';
 import {persistor, store} from './store/store';
 import {getSession} from './store/auth/authSlice';
+import {ensureProfile} from './store/profile/profileSlice';
 
 // Pagine di autenticazione
 import Login from './pages/Login';
@@ -17,14 +18,23 @@ import EmailDebug from './pages/auth/EmailDebug';
 
 // Pagine protette
 import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import MainLayout from './components/layout/MainLayout';
 
 // Componente per inizializzare l'autenticazione
 const AuthInitializer = ({children}: { children: React.ReactNode }) => {
     const dispatch = useDispatch();
 
     useEffect(() => {
-        dispatch(getSession());
+        const initAuth = async () => {
+            await dispatch(getSession());
+
+            // Assicuriamoci che il profilo esista se l'utente è autenticato
+            dispatch(ensureProfile());
+        };
+
+        initAuth();
     }, [dispatch]);
 
     return <>{children}</>;
@@ -47,8 +57,13 @@ const AppContent = () => {
                     {/* Route semi-protette (richiedono autenticazione ma non email verificata) */}
                     <Route element={<ProtectedRoute/>}>
                         <Route path="/email-verification" element={<EmailVerification/>}/>
-                        <Route path="/dashboard" element={<Dashboard/>}/>
-                        {/* Aggiungi qui altre route protette */}
+
+                        {/* Route con layout principale */}
+                        <Route element={<MainLayout/>}>
+                            <Route path="/dashboard" element={<Dashboard/>}/>
+                            <Route path="/profile" element={<Profile/>}/>
+                            {/* Altre route protette con layout principale */}
+                        </Route>
                     </Route>
 
                     {/* Reindirizzamenti predefiniti */}

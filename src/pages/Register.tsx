@@ -2,9 +2,8 @@
 import {FormEvent, useEffect, useState} from 'react';
 import {Link, useNavigate} from 'react-router-dom';
 import {useDispatch, useSelector} from 'react-redux';
-import {initializeUserProfile, resetAuthError, signUp} from '../store/auth/authSlice.ts';
-import {AppDispatch, RootState} from '../store/store.ts';
-import {supabase} from '../lib/supabase.ts';
+import {resetAuthError, signUp} from '../store/auth/authSlice';
+import {RootState} from '../store/store';
 
 const Register = () => {
     // Form state
@@ -25,7 +24,7 @@ const Register = () => {
     const [registrationSuccess, setRegistrationSuccess] = useState(false);
     const [isProcessing, setIsProcessing] = useState(false);
 
-    const dispatch = useDispatch<AppDispatch>();
+    const dispatch = useDispatch();
     const navigate = useNavigate();
 
     // Recupera lo stato di autenticazione dal redux store
@@ -85,58 +84,18 @@ const Register = () => {
         try {
             setIsProcessing(true);
 
-            // Primo passo: registrazione dell'utente
+            // Invio tutti i dati, non solo email e password
             const result = await dispatch(signUp({
                 email: formData.email,
-                password: formData.password
+                password: formData.password,
+                firstName: formData.firstName,
+                lastName: formData.lastName,
+                phoneNumber: formData.phoneNumber
             }));
 
             // Se la registrazione è avvenuta con successo
-            if (signUp.fulfilled.match(result)) {
-                const userData = result.payload;
-
-                if (userData && userData.user) {
-                    console.log('Registrazione utente avvenuta con successo, user ID:', userData.user.id);
-
-                    // Secondo passo: aggiornamento dei metadati utente
-                    try {
-                        // Attendi un momento per assicurarti che l'utente sia completamente registrato
-                        await new Promise(resolve => setTimeout(resolve, 2000));
-
-                        // Aggiorna i metadati utente
-                        const {error: updateError} = await supabase.auth.updateUser({
-                            data: {
-                                first_name: formData.firstName,
-                                last_name: formData.lastName,
-                                phone: formData.phoneNumber
-                            }
-                        });
-
-                        if (updateError) {
-                            console.error('Errore durante l\'aggiornamento dei metadati:', updateError);
-                        } else {
-                            console.log('Metadati utente aggiornati con successo');
-                        }
-
-                        // Terzo passo: inizializzazione del profilo utente tramite Redux
-                        try {
-                            await dispatch(initializeUserProfile({
-                                userId: userData.user.id,
-                                firstName: formData.firstName,
-                                lastName: formData.lastName,
-                                phoneNumber: formData.phoneNumber
-                            }));
-
-                            console.log('Profilo utente inizializzato con successo');
-                        } catch (profileError) {
-                            console.error('Errore durante l\'inizializzazione del profilo:', profileError);
-                        }
-                    } catch (err) {
-                        console.error('Errore durante l\'aggiornamento del profilo:', err);
-                    }
-                }
-
-                // Mostra il messaggio di successo indipendentemente dai risultati dell'aggiornamento profilo
+            if (result.meta.requestStatus === 'fulfilled') {
+                console.log('Registrazione completata con successo!');
                 setRegistrationSuccess(true);
             }
         } catch (err) {

@@ -1,11 +1,12 @@
-import { configureStore } from '@reduxjs/toolkit';
-import { persistStore, persistReducer } from 'redux-persist';
+import {configureStore} from '@reduxjs/toolkit';
+import {persistReducer, persistStore} from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
-import { combineReducers } from 'redux';
+import {combineReducers} from 'redux';
 import authReducer from './auth/authSlice';
 import groupsReducer from './groups/groupsSlice';
 import shoppingListsReducer from './shoppingLists/shoppingListsSlice';
 import expensesReducer from './expenses/expensesSlice';
+import profileReducer from './profile/profileSlice';
 
 const persistConfig = {
     key: 'root',
@@ -17,7 +18,8 @@ const rootReducer = combineReducers({
     auth: authReducer,
     groups: groupsReducer,
     shoppingLists: shoppingListsReducer,
-    expenses: expensesReducer
+    expenses: expensesReducer,
+    profile: profileReducer
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

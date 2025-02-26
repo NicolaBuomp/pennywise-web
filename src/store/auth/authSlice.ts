@@ -48,17 +48,89 @@ export const signInWithGoogle = createAsyncThunk(
     }
 );
 
+// export const signUp = createAsyncThunk(
+//     'auth/signUp',
+//     async ({
+//                email,
+//                password,
+//                firstName,
+//                lastName,
+//                phoneNumber
+//            }: {
+//         email: string;
+//         password: string;
+//         firstName?: string;
+//         lastName?: string;
+//         phoneNumber?: string;
+//     }, {rejectWithValue}) => {
+//         try {
+//             // 1. Registriamo l'utente
+//             const {data, error} = await supabase.auth.signUp({
+//                 email,
+//                 password,
+//                 options: {
+//                     emailRedirectTo: `${window.location.origin}/auth/callback`,
+//                     data: {
+//                         first_name: firstName,
+//                         last_name: lastName,
+//                         phone: phoneNumber
+//                     }
+//                 }
+//             });
+//
+//             if (error) throw error;
+//
+//             // 2. Se abbiamo dati del profilo, tentiamo di creare manualmente il profilo
+//             if (data.user && (firstName || lastName || phoneNumber)) {
+//                 try {
+//                     // Utilizziamo direttamente l'API Supabase per inserire il profilo
+//                     const {error: profileError} = await supabase
+//                         .from('profiles')
+//                         .upsert({
+//                             id: data.user.id,
+//                             first_name: firstName || '',
+//                             last_name: lastName || '',
+//                             display_name: `${firstName || ''} ${lastName || ''}`.trim() || email.split('@')[0],
+//                             phone_number: phoneNumber || '',
+//                             created_at: new Date().toISOString(),
+//                             updated_at: new Date().toISOString()
+//                         });
+//
+//                     if (profileError) {
+//                         console.error('Errore nella creazione del profilo:', profileError);
+//                     }
+//                 } catch (profileErr) {
+//                     console.error('Errore nella creazione del profilo:', profileErr);
+//                     // Non facciamo fallire la registrazione se il profilo non è creato
+//                 }
+//             }
+//
+//             return data;
+//         } catch (error: any) {
+//             return rejectWithValue(error.message);
+//         }
+//     }
+// );
+
 export const signUp = createAsyncThunk(
     'auth/signUp',
-    async ({email, password}: { email: string; password: string }, {rejectWithValue}) => {
+    async ({
+               email,
+               password
+           }: {
+        email: string;
+        password: string;
+    }, {rejectWithValue}) => {
         try {
+            // Solo registrazione base per verificare se il problema è nei metadati
             const {data, error} = await supabase.auth.signUp({
                 email,
                 password,
                 options: {
-                    emailRedirectTo: `${window.location.origin}/auth/callback`
+                    emailRedirectTo: `${window.location.origin}/auth/callback`,
                 }
             });
+
             if (error) throw error;
             return data;
         } catch (error: any) {
@@ -87,67 +159,6 @@ export const getSession = createAsyncThunk(
             const {data, error} = await supabase.auth.getSession();
             if (error) throw error;
             return data;
-        } catch (error: any) {
-            return rejectWithValue(error.message);
-        }
-    }
-);
-
-// Nuova azione per inizializzare il profilo utente
-export const initializeUserProfile = createAsyncThunk(
-    'auth/initializeUserProfile',
-    async ({userId, firstName, lastName, phoneNumber}: {
-        userId: string;
-        firstName: string;
-        lastName: string;
-        phoneNumber: string;
-    }, {rejectWithValue}) => {
-        try {
-            // Attendiamo un momento per essere sicuri che l'utente sia completamente creato
-            await new Promise(resolve => setTimeout(resolve, 1000));
-
-            const {error} = await supabase
-                .from('profiles')
-                .upsert({
-                    id: userId,
-                    first_name: firstName,
-                    last_name: lastName,
-                    phone_number: phoneNumber,
-                    updated_at: new Date().toISOString()
-                }, {
-                    onConflict: 'id'
-                });
-
-            if (error) {
-                console.error('Error initializing profile:', error);
-                throw error;
-            }
-
-            return {firstName, lastName, phoneNumber};
-        } catch (error: any) {
-            console.error('Error in initializeUserProfile thunk:', error);
-            return rejectWithValue(error.message || 'Failed to initialize user profile');
-        }
-    }
-);
-
-// Service role/Admin API per inizializzare/aggiornare un profilo
-export const adminUpdateProfile = createAsyncThunk(
-    'auth/adminUpdateProfile',
-    async ({userId, userData}: { userId: string; userData: any }, {rejectWithValue}) => {
-        try {
-            // Usa l'API di servizio per aggiornare/creare profilo
-            // Richiede una funzione serverless o una chiamata al backend sicura
-            const {error} = await supabase
-                .from('profiles')
-                .upsert({
-                    id: userId,
-                    ...userData,
-                    updated_at: new Date().toISOString()
-                });
-
-            if (error) throw error;
-            return userData;
         } catch (error: any) {
             return rejectWithValue(error.message);
         }
@@ -234,19 +245,6 @@ const authSlice = createSlice({
             .addCase(getSession.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload as string;
-            })
-
-            // Initialize User Profile
-            .addCase(initializeUserProfile.pending, (state) => {
-                state.loading = true;
-            })
-            .addCase(initializeUserProfile.fulfilled, (state) => {
-                state.loading = false;
-                state.profileInitialized = true;
-            })
-            .addCase(initializeUserProfile.rejected, (state, action) => {
-                state.loading = false;
-                state.error = `Errore nell'inizializzazione del profilo: ${action.payload as string}`;
             });
     }
 });
