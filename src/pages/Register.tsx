@@ -1,10 +1,10 @@
 // src/pages/Register.tsx
-import { useState, FormEvent, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import { signUp, resetAuthError } from '../store/auth/authSlice.ts';
-import { RootState, AppDispatch } from '../store/store.ts';
-import { supabase } from '../lib/supabase.ts';
+import {FormEvent, useEffect, useState} from 'react';
+import {Link, useNavigate} from 'react-router-dom';
+import {useDispatch, useSelector} from 'react-redux';
+import {initializeUserProfile, resetAuthError, signUp} from '../store/auth/authSlice.ts';
+import {AppDispatch, RootState} from '../store/store.ts';
+import {supabase} from '../lib/supabase.ts';
 
 const Register = () => {
     // Form state
@@ -23,12 +23,13 @@ const Register = () => {
     });
 
     const [registrationSuccess, setRegistrationSuccess] = useState(false);
+    const [isProcessing, setIsProcessing] = useState(false);
 
     const dispatch = useDispatch<AppDispatch>();
     const navigate = useNavigate();
 
     // Recupera lo stato di autenticazione dal redux store
-    const { loading, error, user } = useSelector((state: RootState) => state.auth);
+    const {loading, error, user} = useSelector((state: RootState) => state.auth);
 
     // Reindirizza se già autenticato
     useEffect(() => {
@@ -43,7 +44,7 @@ const Register = () => {
     }, [dispatch]);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const { name, value } = e.target;
+        const {name, value} = e.target;
         setFormData(prev => ({
             ...prev,
             [name]: value
@@ -51,13 +52,13 @@ const Register = () => {
 
         // Reset degli errori specifici durante la modifica
         if (name === 'password' || name === 'confirmPassword') {
-            setErrors(prev => ({ ...prev, password: '' }));
+            setErrors(prev => ({...prev, password: ''}));
         }
     };
 
     const validateForm = () => {
         let isValid = true;
-        const newErrors = { password: '', general: '' };
+        const newErrors = {password: '', general: ''};
 
         // Validazione password
         if (formData.password !== formData.confirmPassword) {
@@ -82,56 +83,60 @@ const Register = () => {
         }
 
         try {
-            // Primo passo: registra l'utente con Supabase Auth
-            const result = await dispatch(signUp({ email: formData.email, password: formData.password }));
+            setIsProcessing(true);
 
+            // Primo passo: registrazione dell'utente
+            const result = await dispatch(signUp({
+                email: formData.email,
+                password: formData.password
+            }));
+
+            // Se la registrazione è avvenuta con successo
             if (signUp.fulfilled.match(result)) {
-                // Se la registrazione è avvenuta con successo
                 const userData = result.payload;
 
-                // Se abbiamo un user ID, aggiorniamo i dati del profilo
-                if (userData?.user?.id) {
-                    // Aggiorna i metadati utente con le informazioni aggiuntive
-                    const { error: updateError } = await supabase.auth.updateUser({
-                        data: {
-                            first_name: formData.firstName,
-                            last_name: formData.lastName,
-                            phone: formData.phoneNumber
-                        }
-                    });
+                if (userData && userData.user) {
+                    console.log('Registrazione utente avvenuta con successo, user ID:', userData.user.id);
 
-                    if (updateError) {
-                        console.error('Errore durante l\'aggiornamento del profilo:', updateError);
-                        setErrors(prev => ({
-                            ...prev,
-                            general: 'Registrazione completata, ma ci sono stati problemi nel salvare i dati del profilo'
-                        }));
-                    }
-
-                    // Crea un record del profilo nella tabella profiles (se esiste nel tuo schema)
+                    // Secondo passo: aggiornamento dei metadati utente
                     try {
-                        const { error: profileError } = await supabase
-                            .from('profiles')
-                            .insert([
-                                {
-                                    id: userData.user.id,
-                                    first_name: formData.firstName,
-                                    last_name: formData.lastName,
-                                    phone_number: formData.phoneNumber,
-                                    updated_at: new Date()
-                                }
-                            ]);
+                        // Attendi un momento per assicurarti che l'utente sia completamente registrato
+                        await new Promise(resolve => setTimeout(resolve, 2000));
 
-                        if (profileError) {
-                            console.error('Errore durante la creazione del profilo:', profileError);
+                        // Aggiorna i metadati utente
+                        const {error: updateError} = await supabase.auth.updateUser({
+                            data: {
+                                first_name: formData.firstName,
+                                last_name: formData.lastName,
+                                phone: formData.phoneNumber
+                            }
+                        });
+
+                        if (updateError) {
+                            console.error('Errore durante l\'aggiornamento dei metadati:', updateError);
+                        } else {
+                            console.log('Metadati utente aggiornati con successo');
+                        }
+
+                        // Terzo passo: inizializzazione del profilo utente tramite Redux
+                        try {
+                            await dispatch(initializeUserProfile({
+                                userId: userData.user.id,
+                                firstName: formData.firstName,
+                                lastName: formData.lastName,
+                                phoneNumber: formData.phoneNumber
+                            }));
+
+                            console.log('Profilo utente inizializzato con successo');
+                        } catch (profileError) {
+                            console.error('Errore durante l\'inizializzazione del profilo:', profileError);
                         }
                     } catch (err) {
-                        // Se la tabella profiles non esiste ancora, ignora l'errore
-                        console.log('Nota: La tabella profiles potrebbe non esistere ancora');
+                        console.error('Errore durante l\'aggiornamento del profilo:', err);
                     }
                 }
 
-                // Mostra il messaggio di successo
+                // Mostra il messaggio di successo indipendentemente dai risultati dell'aggiornamento profilo
                 setRegistrationSuccess(true);
             }
         } catch (err) {
@@ -140,6 +145,8 @@ const Register = () => {
                 ...prev,
                 general: 'Si è verificato un errore durante la registrazione'
             }));
+        } finally {
+            setIsProcessing(false);
         }
     };
 
@@ -151,12 +158,15 @@ const Register = () => {
                     <h1 className="text-2xl font-bold mb-6 text-center text-gray-900">Registrazione Completata</h1>
                     <div className="mb-6 text-center text-green-600">
                         <svg className="w-16 h-16 mx-auto mb-4" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"></path>
+                            <path fillRule="evenodd"
+                                  d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+                                  clipRule="evenodd"></path>
                         </svg>
                         <p className="text-lg">La tua registrazione è stata completata con successo!</p>
                     </div>
                     <p className="mb-6 text-center text-gray-600">
-                        Ti abbiamo inviato un'email di conferma. Verifica la tua casella di posta e segui le istruzioni per attivare il tuo account.
+                        Ti abbiamo inviato un'email di conferma. Verifica la tua casella di posta e segui le istruzioni
+                        per attivare il tuo account.
                     </p>
                     <div className="flex justify-center">
                         <Link
@@ -297,10 +307,23 @@ const Register = () => {
 
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || isProcessing}
                         className="w-full bg-primary text-white font-medium rounded-lg py-2.5 px-5 text-center hover:bg-primary-dark focus:ring-4 focus:ring-primary-light disabled:opacity-70"
                     >
-                        {loading ? 'Registrazione in corso...' : 'Registrati'}
+                        {loading || isProcessing ? (
+                            <div className="flex items-center justify-center">
+                                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                                     xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor"
+                                            strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor"
+                                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                                Registrazione in corso...
+                            </div>
+                        ) : (
+                            'Registrati'
+                        )}
                     </button>
                 </form>
 
