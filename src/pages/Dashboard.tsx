@@ -8,8 +8,8 @@ import { AuthUser } from '../types/auth';
 
 interface UserProfile {
     id: string;
-    first_name: string | null;
-    last_name: string | null;
+    name: string | null;
+    surname: string | null;
     phone_number: string | null;
     avatar_url: string | null;
     updated_at: string;
@@ -42,13 +42,11 @@ const Dashboard = () => {
                     if (error.code === '42P01') {
                         console.warn('La tabella profiles non esiste ancora. Utilizzando solo i metadati utente.');
                         setTableExists(false);
-
-                        // Crea un profilo dai metadati dell'utente
                         const authUser = user as AuthUser;
                         setProfile({
                             id: authUser.id,
-                            first_name: authUser.user_metadata?.first_name || null,
-                            last_name: authUser.user_metadata?.last_name || null,
+                            name: authUser.user_metadata?.name || null,
+                            surname: authUser.user_metadata?.surname || null,
                             phone_number: authUser.user_metadata?.phone || null,
                             avatar_url: authUser.user_metadata?.avatar_url || null,
                             updated_at: authUser.updated_at || new Date().toISOString()
@@ -69,10 +67,6 @@ const Dashboard = () => {
         loadProfile();
     }, [user]);
 
-    const handleLogout = async () => {
-        await dispatch(signOut());
-    };
-
     if (loading) {
         return (
             <div className="min-h-screen flex justify-center items-center bg-gray-50">
@@ -84,15 +78,6 @@ const Dashboard = () => {
     return (
         <div className="min-h-screen bg-gray-50">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="flex justify-between items-center mb-8">
-                    <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-                    <button
-                        onClick={handleLogout}
-                        className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-                    >
-                        Logout
-                    </button>
-                </div>
 
                 {!tableExists && (
                     <div className="mb-6 bg-yellow-50 border-l-4 border-yellow-400 p-4">
@@ -157,8 +142,8 @@ const Dashboard = () => {
                             <div className="bg-gray-50 px-4 py-5 sm:grid sm:grid-cols-3 sm:gap-4 sm:px-6">
                                 <dt className="text-sm font-medium text-gray-500">Nome completo</dt>
                                 <dd className="mt-1 text-sm text-gray-900 sm:mt-0 sm:col-span-2">
-                                    {profile?.first_name && profile?.last_name
-                                        ? `${profile.first_name} ${profile.last_name}`
+                                    {profile?.name && profile?.surname
+                                        ? `${profile.name} ${profile.surname}`
                                         : 'Non specificato'}
                                 </dd>
                             </div>

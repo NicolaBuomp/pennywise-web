@@ -48,92 +48,44 @@ export const signInWithGoogle = createAsyncThunk(
     }
 );
 
-// export const signUp = createAsyncThunk(
-//     'auth/signUp',
-//     async ({
-//                email,
-//                password,
-//                firstName,
-//                lastName,
-//                phoneNumber
-//            }: {
-//         email: string;
-//         password: string;
-//         firstName?: string;
-//         lastName?: string;
-//         phoneNumber?: string;
-//     }, {rejectWithValue}) => {
-//         try {
-//             // 1. Registriamo l'utente
-//             const {data, error} = await supabase.auth.signUp({
-//                 email,
-//                 password,
-//                 options: {
-//                     emailRedirectTo: `${window.location.origin}/auth/callback`,
-//                     data: {
-//                         first_name: firstName,
-//                         last_name: lastName,
-//                         phone: phoneNumber
-//                     }
-//                 }
-//             });
-//
-//             if (error) throw error;
-//
-//             // 2. Se abbiamo dati del profilo, tentiamo di creare manualmente il profilo
-//             if (data.user && (firstName || lastName || phoneNumber)) {
-//                 try {
-//                     // Utilizziamo direttamente l'API Supabase per inserire il profilo
-//                     const {error: profileError} = await supabase
-//                         .from('profiles')
-//                         .upsert({
-//                             id: data.user.id,
-//                             first_name: firstName || '',
-//                             last_name: lastName || '',
-//                             display_name: `${firstName || ''} ${lastName || ''}`.trim() || email.split('@')[0],
-//                             phone_number: phoneNumber || '',
-//                             created_at: new Date().toISOString(),
-//                             updated_at: new Date().toISOString()
-//                         });
-//
-//                     if (profileError) {
-//                         console.error('Errore nella creazione del profilo:', profileError);
-//                     }
-//                 } catch (profileErr) {
-//                     console.error('Errore nella creazione del profilo:', profileErr);
-//                     // Non facciamo fallire la registrazione se il profilo non è creato
-//                 }
-//             }
-//
-//             return data;
-//         } catch (error: any) {
-//             return rejectWithValue(error.message);
-//         }
-//     }
-// );
-
 export const signUp = createAsyncThunk(
     'auth/signUp',
     async ({
                email,
-               password
+               password,
+               firstName,
+               lastName,
+               phoneNumber
            }: {
         email: string;
         password: string;
+        firstName?: string;
+        lastName?: string;
+        phoneNumber?: string;
     }, {rejectWithValue}) => {
         try {
-            // Solo registrazione base per verificare se il problema è nei metadati
+            // 1. Registriamo l'utente con i metadati
             const {data, error} = await supabase.auth.signUp({
                 email,
                 password,
                 options: {
                     emailRedirectTo: `${window.location.origin}/auth/callback`,
+                    data: {
+                        name: firstName,
+                        surname: lastName,
+                        phone: phoneNumber
+                    }
                 }
             });
 
             if (error) throw error;
+
+            // Non tentiamo di creare profilo qui - verrà fatto durante il callback
+            // dopo la verifica email o durante il processo di ensureProfile
+
             return data;
         } catch (error: any) {
+            console.error('SignUp error:', error);
             return rejectWithValue(error.message);
         }
     }
@@ -160,10 +112,12 @@ export const getSession = createAsyncThunk(
             if (error) throw error;
             return data;
         } catch (error: any) {
+            console.error('getSession error:', error);
             return rejectWithValue(error.message);
         }
     }
 );
+
 
 const authSlice = createSlice({
     name: 'auth',
@@ -171,6 +125,9 @@ const authSlice = createSlice({
     reducers: {
         resetAuthError: (state) => {
             state.error = null;
+        },
+        setProfileInitialized: (state, action) => {
+            state.profileInitialized = action.payload;
         }
     },
     extraReducers: (builder) => {
@@ -227,6 +184,7 @@ const authSlice = createSlice({
                 state.user = null;
                 state.session = null;
                 state.profileInitialized = false;
+                console.log('User signed out successfully');
             })
             .addCase(signOut.rejected, (state, action) => {
                 state.loading = false;
@@ -249,5 +207,5 @@ const authSlice = createSlice({
     }
 });
 
-export const {resetAuthError} = authSlice.actions;
+export const {resetAuthError, setProfileInitialized} = authSlice.actions;
 export default authSlice.reducer;

@@ -1,11 +1,10 @@
 // src/App.tsx
-import {useEffect} from 'react';
+import {useEffect, useState} from 'react';
 import {BrowserRouter, Navigate, Route, Routes} from 'react-router-dom';
 import {Provider, useDispatch} from 'react-redux';
 import {PersistGate} from 'redux-persist/integration/react';
 import {persistor, store} from './store/store';
 import {getSession} from './store/auth/authSlice';
-import {ensureProfile} from './store/profile/profileSlice';
 
 // Pagine di autenticazione
 import Login from './pages/Login';
@@ -21,21 +20,27 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import MainLayout from './components/layout/MainLayout';
+import {ensureProfile} from "./store/profile/profileSlice.tsx";
 
 // Componente per inizializzare l'autenticazione
-const AuthInitializer = ({children}: { children: React.ReactNode }) => {
+const AuthInitializer = ({ children }: { children: React.ReactNode }) => {
     const dispatch = useDispatch();
+    const [initialized, setInitialized] = useState(false);
 
     useEffect(() => {
         const initAuth = async () => {
-            await dispatch(getSession());
+            if (initialized) return;
+            setInitialized(true);
 
-            // Assicuriamoci che il profilo esista se l'utente è autenticato
-            dispatch(ensureProfile());
+            const result = await dispatch(getSession());
+
+            if (result.payload?.session?.user) {
+                dispatch(ensureProfile());
+            }
         };
 
         initAuth();
-    }, [dispatch]);
+    }, [dispatch, initialized]);
 
     return <>{children}</>;
 };

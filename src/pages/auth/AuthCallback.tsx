@@ -5,6 +5,7 @@ import {useDispatch} from 'react-redux';
 import {supabase} from '../../lib/supabase';
 import {getSession} from '../../store/auth/authSlice';
 import {ensureProfile} from '../../store/profile/profileSlice';
+import {AppDispatch} from '../../store/store';
 
 /**
  * Pagina di callback per l'autenticazione OAuth e la verifica email.
@@ -13,7 +14,7 @@ import {ensureProfile} from '../../store/profile/profileSlice';
 const AuthCallback = () => {
     const navigate = useNavigate();
     const location = useLocation();
-    const dispatch = useDispatch();
+    const dispatch = useDispatch<AppDispatch>();
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState<string | null>(null);
@@ -62,38 +63,44 @@ const AuthCallback = () => {
                     setMessage('Verificando la tua email...');
 
                     try {
-                        // Con alcuni provider email, il token potrebbe essere nella query string o nell'hash
-                        const {error} = await supabase.auth.refreshSession();
+                        // Prima tenta di verificare OTP con il token dall'URL
+                        const {error: verifyError} = await supabase.auth.verifyOtp({
+                            token_hash: emailToken,
+                            type: 'email',  // o signup/magiclink a seconda del tipo
+                        });
 
-                        if (error) {
-                            console.error('Email verification error:', error);
+                        if (verifyError) {
+                            console.error('Email verification error with token hash:', verifyError);
 
-                            // Conserva il token per la verifica manuale
-                            localStorage.setItem('verification_token', emailToken);
-                            localStorage.setItem('verification_type', type || 'signup');
+                            // Tenta un altro approccio usando il refresh della sessione
+                            const {error: refreshError} = await supabase.auth.refreshSession();
 
-                            setError('Errore durante la verifica dell\'email. Prova con la verifica manuale.');
-
-                            // Reindirizza alla verifica manuale dopo 3 secondi
-                            setTimeout(() => {
-                                navigate('/verify-email-manual');
-                            }, 3000);
-                            return;
-                        } else {
-                            // Ottieni la sessione aggiornata
-                            await dispatch(getSession());
-                            setMessage('Email verificata con successo! Redirecting...');
-
-                            // Reindirizza alla pagina di conferma
-                            setTimeout(() => {
-                                navigate('/email-confirmed');
-                            }, 2000);
-                            return;
+                            if (refreshError) {
+                                throw refreshError;
+                            }
                         }
+
+                        // Ottieni la sessione aggiornata
+                        await dispatch(getSession());
+                        setMessage('Email verificata con successo! Redirecting...');
+
+                        // Assicurati che il profilo esista
+                        await dispatch(ensureProfile());
+
+                        // Reindirizza alla pagina di conferma
+                        setTimeout(() => {
+                            navigate('/email-confirmed');
+                        }, 1500);
+                        return;
+
                     } catch (verifyError) {
                         console.error('Error during email verification:', verifyError);
                         localStorage.setItem('verification_error', JSON.stringify(verifyError));
                         setError('Si è verificato un errore tecnico durante la verifica. Prova con la verifica manuale.');
+
+                        // Conserva il token per la verifica manuale
+                        localStorage.setItem('verification_token', emailToken);
+                        localStorage.setItem('verification_type', type || 'signup');
 
                         // Reindirizza alla verifica manuale dopo 3 secondi
                         setTimeout(() => {
@@ -108,27 +115,50 @@ const AuthCallback = () => {
                     setMessage('Completando l\'autenticazione...');
 
                     // Gestisci il token PKCE (Authorization Code Flow con PKCE)
-                    const {error} = await supabase.auth.refreshSession();
+                    try {
+                        // Se abbiamo un access token nell'hash, imposta la sessione
+                        if (accessToken) {
+                            // Supabase potrebbe aver già impostato la sessione automaticamente
+                            // Verifichiamo e aggiorniamo la sessione nello store Redux
+                        }
 
-                    if (error) {
-                        console.error('OAuth callback error:', error);
-                        setError('Errore durante l\'autenticazione con il provider. Riprova.');
-                    } else {
+                        const {error: refreshError} = await supabase.auth.refreshSession();
+
+                        if (refreshError) {
+                            throw refreshError;
+                        }
+
                         // Aggiorna la sessione nello store
                         await dispatch(getSession());
 
                         // Assicura che il profilo esista
-                        dispatch(ensureProfile());
+                        await dispatch(ensureProfile());
 
                         // Reindirizza alla dashboard
                         navigate('/dashboard');
                         return;
+                    } catch (error) {
+                        console.error('OAuth callback error:', error);
+                        setError('Errore durante l\'autenticazione con il provider. Riprova.');
                     }
                 }
 
                 // Se nessuna delle condizioni sopra è soddisfatta
                 if (!emailToken && !accessToken && !refreshToken) {
                     console.warn('No authentication tokens found in URL');
+
+                    // Tenta di ottenere la sessione comunque, in caso Supabase l'abbia già impostata
+                    try {
+                        const {data: {session}} = await supabase.auth.getSession();
+                        if (session) {
+                            await dispatch(getSession());
+                            navigate('/dashboard');
+                            return;
+                        }
+                    } catch (err) {
+                        console.error("Error checking session:", err);
+                    }
+
                     navigate('/login');
                     return;
                 }
@@ -185,7 +215,6 @@ const AuthCallback = () => {
         );
     }
 
-    // Fallback - non dovrebbe mai essere visualizzato
     return null;
 };
 

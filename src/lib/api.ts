@@ -1,7 +1,6 @@
 import axios, { AxiosError, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { supabase } from './supabase';
 
-// Ottieni l'URL base dall'ambiente
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
 // Crea un'istanza di axios con la configurazione di base
@@ -14,51 +13,64 @@ const api = axios.create({
 
 // Interceptor per le richieste
 api.interceptors.request.use(
-    async (config: AxiosRequestConfig) => {
-        // Ottieni la sessione corrente da Supabase
-        const { data: sessionData } = await supabase.auth.getSession();
-        const token = sessionData.session?.access_token;
+    async (config) => {
+        try {
+            const { data: { session } } = await supabase.auth.getSession();
 
-        // Se esiste un token, aggiungilo all'header di autorizzazione
-        if (token && config.headers) {
-            config.headers.Authorization = `Bearer ${token}`;
+            if (session?.access_token) {
+                console.log('Token found:', session.access_token);
+                config.headers.Authorization = `Bearer ${session.access_token}`;
+            } else {
+                console.warn('No active session found');
+                return Promise.reject(new Error('No active session'));
+            }
+
+            return config;
+        } catch (error) {
+            console.error('Error in request interceptor:', error);
+            return Promise.reject(error);
         }
-
-        return config;
     },
-    (error: AxiosError) => {
-        // Gestisci gli errori nella richiesta
-        console.error('Request error:', error);
+    (error) => {
+        console.error('Request interceptor error:', error);
         return Promise.reject(error);
     }
 );
 
 api.interceptors.response.use(
     (response: AxiosResponse) => {
-        // Puoi elaborare la risposta qui se necessario
+        // Log delle risposte per debugging
+        console.log(`API Response from ${response.config.url}: Status ${response.status}`);
         return response;
     },
     async (error: AxiosError) => {
         // Gestisci gli errori nella risposta
         if (error.response) {
+            console.error(`API Error ${error.response.status} from ${error.config?.url}:`, error.response.data);
+
             // Errori del server (status code non 2xx)
             if (error.response.status === 401) {
+                console.log('Attempting to refresh token due to 401 error');
                 // Token scaduto o non valido, prova a ottenere una nuova sessione
                 const { data } = await supabase.auth.refreshSession();
 
                 // Se il refresh ha successo, riprova la richiesta originale
                 if (data.session) {
+                    console.log('Token refreshed successfully, retrying request');
                     // Ripristina la richiesta originale con il nuovo token
                     if (error.config) {
                         error.config.headers['Authorization'] = `Bearer ${data.session.access_token}`;
                         return api(error.config);
                     }
                 } else {
+                    console.warn('Token refresh failed, signout may be required');
                     // Se il refresh fallisce, reindirizza al login
                     // Puoi usare un evento personalizzato o un'azione Redux per gestire questo
                     window.dispatchEvent(new CustomEvent('auth:signout-required'));
                 }
             }
+        } else {
+            console.error('API Error without response:', error.message);
         }
 
         return Promise.reject(error);
