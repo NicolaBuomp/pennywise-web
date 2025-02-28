@@ -7,6 +7,7 @@ import groupsReducer from './groups/groupsSlice';
 import shoppingListsReducer from './shoppingLists/shoppingListsSlice';
 import expensesReducer from './expenses/expensesSlice';
 import profileReducer from './profile/profileSlice';
+import themeReducer from "./theme/themeSlice.ts";
 
 const persistConfig = {
     key: 'root',
@@ -19,7 +20,8 @@ const rootReducer = combineReducers({
     groups: groupsReducer,
     shoppingLists: shoppingListsReducer,
     expenses: expensesReducer,
-    profile: profileReducer
+    profile: profileReducer,
+    theme: themeReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

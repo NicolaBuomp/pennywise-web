@@ -1,9 +1,9 @@
 // src/pages/Profile.tsx
 import {ChangeEvent, FormEvent, useEffect, useState} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
-import {AppDispatch, RootState} from '../store/store';
-import {fetchProfile, resetUpdateSuccess, updateProfile, uploadAvatar} from '../store/profile/profileSlice';
-import {UpdateProfileRequest} from '../types/profile';
+import {AppDispatch, RootState} from '../../store/store.ts';
+import {fetchProfile, resetUpdateSuccess, updateProfile, uploadAvatar} from '../../store/profile/profileSlice.tsx';
+import {UpdateProfileRequest} from '../../types/profile.ts';
 
 const Profile = () => {
     const dispatch = useDispatch<AppDispatch>();
@@ -12,7 +12,7 @@ const Profile = () => {
     const [avatarFile, setAvatarFile] = useState<File | null>(null);
     const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
     const [formData, setFormData] = useState<UpdateProfileRequest>({
-        firstName: '',
+        first_name: '',
         lastName: '',
         displayName: '',
         phoneNumber: '',
