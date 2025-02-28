@@ -20,10 +20,10 @@ import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import MainLayout from './components/layout/MainLayout';
-import {ensureProfile} from "./store/profile/profileSlice.tsx";
+import {fetchProfile} from "./store/profile/profileSlice.tsx";
 
 // Componente per inizializzare l'autenticazione
-const AuthInitializer = ({ children }: { children: React.ReactNode }) => {
+const AuthInitializer = ({children}: { children: React.ReactNode }) => {
     const dispatch = useDispatch();
     const [initialized, setInitialized] = useState(false);
 
@@ -35,7 +35,7 @@ const AuthInitializer = ({ children }: { children: React.ReactNode }) => {
             const result = await dispatch(getSession());
 
             if (result.payload?.session?.user) {
-                dispatch(ensureProfile());
+                dispatch(fetchProfile());
             }
         };
 

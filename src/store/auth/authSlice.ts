@@ -50,46 +50,31 @@ export const signInWithGoogle = createAsyncThunk(
 
 export const signUp = createAsyncThunk(
     'auth/signUp',
-    async ({
-               email,
-               password,
-               firstName,
-               lastName,
-               phoneNumber
-           }: {
-        email: string;
-        password: string;
-        firstName?: string;
-        lastName?: string;
-        phoneNumber?: string;
-    }, {rejectWithValue}) => {
+    async ({email, password, firstName, lastName, phoneNumber}, {rejectWithValue}) => {
         try {
-            // 1. Registriamo l'utente con i metadati
             const {data, error} = await supabase.auth.signUp({
                 email,
                 password,
                 options: {
-                    emailRedirectTo: `${window.location.origin}/auth/callback`,
                     data: {
-                        name: firstName,
-                        surname: lastName,
-                        phone: phoneNumber
-                    }
+                        firstName,
+                        lastName,
+                        phoneNumber
+                    },
+                    emailRedirectTo: `${window.location.origin}/auth/callback` // 🔥 Redirige l'utente all app
                 }
             });
 
             if (error) throw error;
 
-            // Non tentiamo di creare profilo qui - verrà fatto durante il callback
-            // dopo la verifica email o durante il processo di ensureProfile
 
             return data;
         } catch (error: any) {
-            console.error('SignUp error:', error);
-            return rejectWithValue(error.message);
+            return rejectWithValue(error.message || 'Errore durante la registrazione');
         }
     }
 );
+
 
 export const signOut = createAsyncThunk(
     'auth/signOut',
