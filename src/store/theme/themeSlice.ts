@@ -4,8 +4,19 @@ type ThemeState = {
     theme: "light" | "dark";
 };
 
+const getInitialTheme = (): "light" | "dark" => {
+    // Controlliamo il valore nel localStorage
+    const storedTheme = localStorage.getItem("theme");
+    if (storedTheme === "dark") {
+        document.documentElement.classList.add("dark"); // Applicare subito la classe dark
+        return "dark";
+    }
+    document.documentElement.classList.remove("dark"); // Assicuriamoci che la classe venga rimossa se necessario
+    return "light";
+};
+
 const initialState: ThemeState = {
-    theme: localStorage.getItem("theme") === "dark" ? "dark" : "light", // Recupera il tema dal localStorage
+    theme: getInitialTheme(),
 };
 
 const themeSlice = createSlice({

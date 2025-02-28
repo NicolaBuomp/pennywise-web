@@ -34,7 +34,7 @@ export default function ThemeToggle() {
                     theme === "dark" ? "bg-[var(--color-primary)]" : "bg-white"
                 }`}
                 initial={false}
-                animate={{x: theme === "dark" ? 32 : 0}}
+                animate={{x: theme === "dark" ? 28 : 0}}
                 transition={{type: "spring", stiffness: 250, damping: 20}}
             />
         </div>
