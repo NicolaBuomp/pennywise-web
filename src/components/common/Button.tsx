@@ -1,13 +1,15 @@
 import React from "react";
+import {Link} from "react-router-dom";
 
 type ButtonProps = {
     children: React.ReactNode;
     onClick?: () => void;
     variant?: "primary" | "secondary" | "glass" | "icon" | "floating";
     className?: string;
+    to?: string;
 };
 
-export default function Button({children, onClick, variant = "primary", className}: ButtonProps) {
+export default function Button({children, onClick, variant = "primary", className, to}: ButtonProps) {
     const baseClass =
         "inline-flex items-center justify-center px-4 py-2 rounded-md font-medium transition-all duration-200 ease-in-out cursor-pointer";
 
@@ -18,6 +20,15 @@ export default function Button({children, onClick, variant = "primary", classNam
         icon: "p-2 rounded-full bg-transparent hover:bg-[var(--color-subtle)]",
         floating: "p-3 rounded-full shadow-lg bg-[var(--color-primary)] text-white fixed bottom-6 right-6",
     };
+
+    if (to) {
+        return (
+            <Link to={to} className={`${baseClass} ${variants[variant]} ${className}`}>
+                {children}
+            </Link>
+        );
+    }
+    
 
     return (
         <button onClick={onClick} className={`${baseClass} ${variants[variant]} ${className}`}>

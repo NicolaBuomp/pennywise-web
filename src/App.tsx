@@ -23,6 +23,7 @@ import {NotFound, Unauthorized} from "./pages/error";
 // 📌 Import Componenti Layout e Routing
 import ProtectedRoute from "./components/auth/ProtectedRoute";
 import MainLayout from "./components/layout/MainLayout";
+import Home from "./pages/Home.tsx";
 
 // 🔹 Componente per inizializzare l'autenticazione
 const AuthInitializer = ({children}: { children: React.ReactNode }) => {
@@ -54,6 +55,7 @@ const AppContent = () => {
             <AuthInitializer>
                 <Routes>
                     {/* 📌 Route pubbliche */}
+                    <Route path="/home" element={<Home/>}/>
                     <Route path="/login" element={<Login/>}/>
                     <Route path="/register" element={<Register/>}/>
                     <Route path="/auth/callback" element={<AuthCallback/>}/>

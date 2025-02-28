@@ -50,18 +50,18 @@ export const signInWithGoogle = createAsyncThunk(
 
 export const signUp = createAsyncThunk(
     'auth/signUp',
-    async ({email, password, firstName, lastName, phoneNumber}, {rejectWithValue}) => {
+    async ({email, password, first_name, last_name, phone_number}, {rejectWithValue}) => {
         try {
             const {data, error} = await supabase.auth.signUp({
                 email,
                 password,
                 options: {
                     data: {
-                        firstName,
-                        lastName,
-                        phoneNumber
+                        first_name,
+                        last_name,
+                        phone_number
                     },
-                    emailRedirectTo: `${window.location.origin}/auth/callback` // 🔥 Redirige l'utente all app
+                    emailRedirectTo: `${window.location.origin}/auth/callback`
                 }
             });
 

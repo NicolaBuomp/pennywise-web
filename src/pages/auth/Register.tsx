@@ -1,31 +1,28 @@
-// src/pages/Register.tsx
-import {FormEvent, useEffect, useState} from 'react';
-import {Link, useNavigate} from 'react-router-dom';
-import {useDispatch, useSelector} from 'react-redux';
-import {resetAuthError, signUp} from '../../store/auth/authSlice.ts';
-import {RootState} from '../../store/store.ts';
+import {FormEvent, useEffect, useState} from "react";
+import {Link, useNavigate} from "react-router-dom";
+import {useDispatch, useSelector} from "react-redux";
+import {resetAuthError, signUp} from "../../store/auth/authSlice";
+import {RootState} from "../../store/store";
+import {Button, Card, Input} from "../../components/common";
 
 const Register = () => {
     const [formData, setFormData] = useState({
-        email: '',
-        password: '',
-        confirmPassword: '',
-        firstName: '',
-        lastName: '',
-        phoneNumber: '',
+        email: "",
+        password: "",
+        confirmPassword: "",
+        first_name: "",
+        last_name: "",
+        phone_number: "",
     });
 
-    const [errors, setErrors] = useState({password: '', general: ''});
-    const [isProcessing, setIsProcessing] = useState(false);
-
+    const [errors, setErrors] = useState({password: "", general: ""});
     const dispatch = useDispatch();
     const navigate = useNavigate();
-
     const {loading, error, user} = useSelector((state: RootState) => state.auth);
 
     useEffect(() => {
         if (user) {
-            navigate('/dashboard');
+            navigate("/dashboard");
         }
     }, [user, navigate]);
 
@@ -36,22 +33,22 @@ const Register = () => {
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const {name, value} = e.target;
         setFormData((prev) => ({...prev, [name]: value}));
-        if (name === 'password' || name === 'confirmPassword') {
-            setErrors((prev) => ({...prev, password: ''}));
+        if (name === "password" || name === "confirmPassword") {
+            setErrors((prev) => ({...prev, password: ""}));
         }
     };
 
     const validateForm = () => {
         let isValid = true;
-        const newErrors = {password: '', general: ''};
+        const newErrors = {password: "", general: ""};
 
         if (formData.password !== formData.confirmPassword) {
-            newErrors.password = 'Le password non corrispondono';
+            newErrors.password = "Le password non corrispondono";
             isValid = false;
         }
 
         if (formData.password.length < 8) {
-            newErrors.password = 'La password deve essere di almeno 8 caratteri';
+            newErrors.password = "La password deve essere di almeno 8 caratteri";
             isValid = false;
         }
 
@@ -63,64 +60,46 @@ const Register = () => {
         e.preventDefault();
         if (!validateForm()) return;
         try {
-            setIsProcessing(true);
-            const result = await dispatch(signUp({
-                email: formData.email,
-                password: formData.password,
-                firstName: formData.firstName,
-                lastName: formData.lastName,
-                phoneNumber: formData.phoneNumber
-            }));
+            const result = await dispatch(signUp(formData));
 
-            if (result.meta.requestStatus === 'fulfilled') {
-                console.log('Registrazione completata con successo!');
-                navigate('/email-verification');
+            if (result.meta.requestStatus === "fulfilled") {
+                console.log("Registrazione completata con successo!");
+                navigate("/email-verification");
             }
         } catch (err) {
-            console.error('Errore durante la registrazione:', err);
-            setErrors((prev) => ({...prev, general: 'Si è verificato un errore durante la registrazione'}));
-        } finally {
-            setIsProcessing(false);
+            console.error("Errore durante la registrazione:", err);
+            setErrors((prev) => ({...prev, general: "Si è verificato un errore durante la registrazione"}));
         }
     };
 
     return (
-        <div className="min-h-screen flex justify-center items-center bg-gray-50 py-8 px-4">
-            <div className="max-w-md w-full p-6 rounded-lg shadow-lg bg-white">
-                <h1 className="text-2xl font-bold mb-6 text-center text-gray-900">Crea un account</h1>
-                {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md">{error}</div>}
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <input type="text" name="firstName" value={formData.firstName} onChange={handleChange}
-                           placeholder="Nome"
-                           className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-                           required/>
-                    <input type="text" name="lastName" value={formData.lastName} onChange={handleChange}
-                           placeholder="Cognome"
-                           className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-                           required/>
-                    <input type="email" name="email" value={formData.email} onChange={handleChange} placeholder="Email"
-                           className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-                           required/>
-                    <input type="tel" name="phoneNumber" value={formData.phoneNumber} onChange={handleChange}
-                           placeholder="Numero di telefono"
-                           className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"/>
-                    <input type="password" name="password" value={formData.password} onChange={handleChange}
-                           placeholder="Password"
-                           className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-                           required minLength={8}/>
-                    <input type="password" name="confirmPassword" value={formData.confirmPassword}
-                           onChange={handleChange} placeholder="Conferma Password"
-                           className="w-full p-2.5 border rounded-lg focus:ring-2 focus:ring-primary focus:border-primary"
-                           required/>
-                    {errors.password && <p className="text-sm text-red-600">{errors.password}</p>}
-                    <button type="submit" disabled={loading || isProcessing}
-                            className="w-full bg-primary text-white font-medium rounded-lg py-2.5 px-5 text-center hover:bg-primary-dark focus:ring-4 focus:ring-primary-light disabled:opacity-70">Registrati
-                    </button>
+        <div className="flex items-center justify-center min-h-screen bg-[var(--color-bg)]">
+            <Card title="Registrati su Pennywise">
+                {error && <p className="text-red-500">{error}</p>}
+                {errors.password && <p className="text-red-500">{errors.password}</p>}
+
+                <form onSubmit={handleSubmit} className="mt-4 space-y-4">
+                    <Input type="text" name="first_name" placeholder="Nome" value={formData.first_name}
+                           onChange={handleChange}/>
+                    <Input type="text" name="last_name" placeholder="Cognome" value={formData.last_name}
+                           onChange={handleChange}/>
+                    <Input type="email" name="email" placeholder="Email" value={formData.email}
+                           onChange={handleChange}/>
+                    <Input type="tel" name="phone_number" placeholder="Numero di telefono (opzionale)"
+                           value={formData.phone_number} onChange={handleChange}/>
+                    <Input type="password" name="password" placeholder="Password" value={formData.password}
+                           onChange={handleChange}/>
+                    <Input type="password" name="confirmPassword" placeholder="Conferma Password"
+                           value={formData.confirmPassword} onChange={handleChange}/>
+                    <Button type="submit"
+                            className="w-full">{loading ? "Registrazione in corso..." : "Registrati"}</Button>
                 </form>
-                <p className="text-sm text-gray-600">Hai già un account? <Link to="/login"
-                                                                               className="text-primary hover:underline">Accedi</Link>
+
+                <p className="mt-4 text-center text-sm text-[var(--color-text-soft)]">
+                    Hai già un account? <Link to="/login"
+                                              className="text-[var(--color-primary)] hover:underline">Accedi</Link>
                 </p>
-            </div>
+            </Card>
         </div>
     );
 };
