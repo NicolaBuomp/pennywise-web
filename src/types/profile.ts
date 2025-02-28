@@ -2,7 +2,7 @@ export interface ProfileDto {
     id: string;
     first_name: string;
     last_name: string;
-    display_name: string;
+    full_name: string;
     phone_number: string | null;
     avatar_url: string | null;
     language: string;
@@ -15,7 +15,7 @@ export interface ProfileDto {
 export interface UpdateProfileRequest {
     first_name?: string;
     last_name?: string;
-    display_name?: string;
+    full_name?: string;
     phone_number?: string;
     language?: string;
     currency?: string;

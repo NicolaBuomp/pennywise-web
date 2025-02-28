@@ -21,7 +21,7 @@ export const fetchProfile = createAsyncThunk(
     async (_, {rejectWithValue}) => {
         try {
             const response = await api.get<ProfileDto>('/profiles/me');
-            return response.data;
+            return response;
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.message || error.message);
         }
@@ -33,7 +33,7 @@ export const updateProfile = createAsyncThunk(
     async (profileData: Partial<ProfileDto>, {rejectWithValue}) => {
         try {
             const response = await api.put<ProfileDto>('/profiles/me', profileData);
-            return response.data;
+            return response;
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.message || error.message);
         }
@@ -51,7 +51,7 @@ export const uploadAvatar = createAsyncThunk(
                     'Content-Type': 'multipart/form-data',
                 },
             });
-            return response.data.avatarUrl;
+            return response.avatarUrl;
         } catch (error: any) {
             return rejectWithValue(error.response?.data?.message || error.message);
         }
@@ -105,7 +105,7 @@ const profileSlice = createSlice({
             .addCase(uploadAvatar.fulfilled, (state, action) => {
                 state.loading = false;
                 if (state.data) {
-                    state.data.avatarUrl = action.payload;
+                    state.data.avatar_url = action.payload;
                 }
             })
             .addCase(uploadAvatar.rejected, (state, action) => {
