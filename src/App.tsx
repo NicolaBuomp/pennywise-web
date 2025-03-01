@@ -17,7 +17,7 @@ import {
     Register,
     VerifyEmailManual
 } from "./pages/auth";
-import {Dashboard, Profile, Settings} from "./pages/protected";
+import {Dashboard, GroupDetails, Profile, Settings} from "./pages/protected";
 import {NotFound, Unauthorized} from "./pages/error";
 
 // 📌 Import Componenti Layout e Routing
@@ -72,6 +72,7 @@ const AppContent = () => {
                             <Route path="/dashboard" element={<Dashboard/>}/>
                             <Route path="/profile" element={<Profile/>}/>
                             <Route path="/settings" element={<Settings/>}/>
+                            <Route path="/groups/:groupId" element={<GroupDetails/>}/>
                         </Route>
                     </Route>
 

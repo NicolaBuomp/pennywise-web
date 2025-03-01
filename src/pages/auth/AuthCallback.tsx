@@ -23,11 +23,10 @@ const AuthCallback = () => {
                 if (result.payload?.session?.user) {
                     const user = result.payload.session.user;
 
-                    // Assicura che la tabella `profiles` abbia i dati dell'utente
                     await dispatch(updateProfile({
-                        first_name: user.user_metadata?.firstName || '',
-                        last_name: user.user_metadata?.lastName || '',
-                        phone_number: user.user_metadata?.phoneNumber || ''
+                        first_name: user.user_metadata?.first_name || '',
+                        last_name: user.user_metadata?.last_name || '',
+                        phone_number: user.user_metadata?.phone_number || ''
                     }));
 
                     await dispatch(fetchProfile()); // Recupera il profilo aggiornato

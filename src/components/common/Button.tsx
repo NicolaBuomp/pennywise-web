@@ -6,10 +6,11 @@ type ButtonProps = {
     onClick?: () => void;
     variant?: "primary" | "secondary" | "glass" | "icon" | "floating";
     className?: string;
+    disabled?: boolean;
     to?: string;
 };
 
-export default function Button({children, onClick, variant = "primary", className, to}: ButtonProps) {
+export default function Button({children, onClick, variant = "primary", className, disabled, to}: ButtonProps) {
     const baseClass =
         "inline-flex items-center justify-center px-4 py-2 rounded-md font-medium transition-all duration-200 ease-in-out cursor-pointer";
 
@@ -28,10 +29,10 @@ export default function Button({children, onClick, variant = "primary", classNam
             </Link>
         );
     }
-    
+
 
     return (
-        <button onClick={onClick} className={`${baseClass} ${variants[variant]} ${className}`}>
+        <button disabled={disabled} onClick={onClick} className={`${baseClass} ${variants[variant]} ${className}`}>
             {children}
         </button>
     );
