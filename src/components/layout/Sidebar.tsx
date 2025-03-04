@@ -1,114 +1,92 @@
-import {Link, useLocation, useNavigate} from "react-router-dom";
-import {useEffect, useState} from "react";
-import {FaBars, FaCog, FaSignOutAlt, FaTachometerAlt, FaTimes, FaUser} from "react-icons/fa";
-import {motion} from "framer-motion";
-import {Button} from "../common";
-import {useDispatch, useSelector} from "react-redux";
-import {AppDispatch, RootState} from "../../store/store";
-import {signOut} from "../../store/auth/authSlice";
+import { Drawer, List, ListItemButton, ListItemIcon, ListItemText, IconButton } from "@mui/material";
+import { FaBars, FaCog, FaSignOutAlt, FaTachometerAlt, FaUser } from "react-icons/fa";
+import { useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch, RootState } from "../../store/store";
+import { signOut } from "../../store/auth/authSlice";
 
 export default function Sidebar() {
     const [isOpen, setIsOpen] = useState(false);
     const location = useLocation();
-    const [isDesktop, setIsDesktop] = useState(window.innerWidth >= 1024);
     const dispatch = useDispatch<AppDispatch>();
-    const navigate = useNavigate();
-    const {user} = useSelector((state: RootState) => state.auth);
-
-    // Effetto per aggiornare lo stato quando cambia la dimensione dello schermo
-    useEffect(() => {
-        const handleResize = () => {
-            setIsDesktop(window.innerWidth >= 1024);
-        };
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, []);
-
-    // Funzione per gestire il logout
-    const handleLogout = () => {
-        dispatch(signOut());
-    };
-
-    // Effetto per reindirizzare alla Home dopo il logout
-    useEffect(() => {
-        if (!user) {
-            navigate("/"); // Reindirizza alla home se l'utente è disconnesso
-        }
-    }, [user, navigate]);
+    const { user } = useSelector((state: RootState) => state.auth);
 
     // Elementi del menu
     const menuItems = [
-        {name: "Dashboard", path: "/dashboard", icon: <FaTachometerAlt size={20}/>},
-        {name: "Profilo", path: "/profile", icon: <FaUser size={20}/>},
-        {name: "Impostazioni", path: "/settings", icon: <FaCog size={20}/>},
+        { name: "Dashboard", path: "/dashboard", icon: <FaTachometerAlt /> },
+        { name: "Profilo", path: "/profile", icon: <FaUser /> },
+        { name: "Impostazioni", path: "/settings", icon: <FaCog /> },
     ];
 
     return (
         <>
             {/* Pulsante per aprire la sidebar su mobile */}
-            {!isDesktop && (
-                <button
-                    onClick={() => setIsOpen(true)}
-                    className="fixed top-4 left-4 z-50 text-[var(--color-primary)] lg:hidden"
-                >
-                    <FaBars size={24}/>
-                </button>
-            )}
-
-            {/* Sidebar principale */}
-            <motion.aside
-                initial={{x: "-100%"}}
-                animate={{x: isOpen || isDesktop ? "0%" : "-100%"}}
-                transition={{duration: 0.15, ease: "easeInOut"}}
-                className={`h-full w-64 shadow-md bg-[var(--color-bg-soft)] transition-all flex flex-col z-50 
-                ${isDesktop ? "relative translate-x-0" : "fixed top-0 left-0"} lg:flex`}
+            <IconButton
+                onClick={() => setIsOpen(true)}
+                sx={{ position: "fixed", top: 16, left: 16, zIndex: 1301, display: { lg: "none" } }}
             >
-                {/* Pulsante per chiudere la sidebar su mobile */}
-                {!isDesktop && (
-                    <button onClick={() => setIsOpen(false)} className="p-4 text-[var(--color-primary)] lg:hidden">
-                        <FaTimes size={22}/>
-                    </button>
-                )}
+                <FaBars />
+            </IconButton>
 
-                {/* Menu di navigazione */}
-                <nav className="mt-3 flex-1">
+            {/* Sidebar */}
+            <Drawer
+                variant="permanent"
+                sx={{
+                    width: 240,
+                    flexShrink: 0,
+                    [`& .MuiDrawer-paper`]: { width: 240, boxSizing: "border-box" },
+                    display: { xs: "none", lg: "block" },
+                }}
+            >
+                <List>
                     {menuItems.map((item) => (
-                        <Link
+                        <ListItemButton
                             key={item.path}
+                            component={Link}
                             to={item.path}
-                            className={`flex items-center gap-4 px-6 py-3 mx-4.5 text-[var(--color-text)] hover:bg-[var(--color-subtle)] transition-all duration-150 rounded-md
-                            ${location.pathname === item.path ? "bg-[var(--color-primary)] text-white" : ""}`}
-                            onClick={() => setIsOpen(false)} // Chiude la sidebar su mobile
+                            selected={location.pathname === item.path}
                         >
-                            {item.icon}
-                            <span>{item.name}</span>
-                        </Link>
+                            <ListItemIcon>{item.icon}</ListItemIcon>
+                            <ListItemText primary={item.name} />
+                        </ListItemButton>
                     ))}
-                </nav>
+                </List>
+                <ListItemButton onClick={() => dispatch(signOut())} sx={{ color: "error.main" }}>
+                    <ListItemIcon>
+                        <FaSignOutAlt />
+                    </ListItemIcon>
+                    <ListItemText primary="Logout" />
+                </ListItemButton>
+            </Drawer>
 
-                {/* Sezione inferiore: Logout */}
-                <div className="mt-auto mx-4.5 mb-2">
-                    <Button
-                        variant="icon"
-                        className="flex items-center gap-4 px-6 py-3 text-red-500 hover:text-red-100 hover:bg-red-500 transition-all duration-150 w-full rounded-md"
-                        onClick={handleLogout}
-                    >
-                        <FaSignOutAlt size={18}/>
-                        <span>Logout</span>
-                    </Button>
-                </div>
-            </motion.aside>
-
-            {/* Overlay su mobile */}
-            {!isDesktop && isOpen && (
-                <motion.div
-                    initial={{opacity: 0}}
-                    animate={{opacity: 0.5}}
-                    exit={{opacity: 0}}
-                    className="fixed inset-0 bg-black z-40 lg:hidden"
-                    onClick={() => setIsOpen(false)}
-                ></motion.div>
-            )}
+            {/* Drawer Mobile */}
+            <Drawer
+                open={isOpen}
+                onClose={() => setIsOpen(false)}
+                sx={{ [`& .MuiDrawer-paper`]: { width: 240, boxSizing: "border-box" } }}
+            >
+                <List>
+                    {menuItems.map((item) => (
+                        <ListItemButton
+                            key={item.path}
+                            component={Link}
+                            to={item.path}
+                            selected={location.pathname === item.path}
+                            onClick={() => setIsOpen(false)}
+                        >
+                            <ListItemIcon>{item.icon}</ListItemIcon>
+                            <ListItemText primary={item.name} />
+                        </ListItemButton>
+                    ))}
+                </List>
+                <ListItemButton onClick={() => dispatch(signOut())} sx={{ color: "error.main" }}>
+                    <ListItemIcon>
+                        <FaSignOutAlt />
+                    </ListItemIcon>
+                    <ListItemText primary="Logout" />
+                </ListItemButton>
+            </Drawer>
         </>
     );
 }

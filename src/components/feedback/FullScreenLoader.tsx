@@ -1,17 +1,12 @@
-import {motion} from "framer-motion";
-import Spinner from "./Spinner.tsx";
+import { Backdrop, CircularProgress, Typography } from "@mui/material";
 
 export default function FullScreenLoader() {
     return (
-        <motion.div
-            initial={{opacity: 0}}
-            animate={{opacity: 1}}
-            className="fixed inset-0 flex items-center justify-center bg-[var(--color-bg)] text-[var(--color-text)]"
-        >
-            <div className="flex flex-col items-center gap-4">
-                <Spinner/>
-                <p>Caricamento in corso...</p>
+        <Backdrop open={true} sx={{ color: "#fff", zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+            <div style={{ textAlign: "center" }}>
+                <CircularProgress color="inherit" />
+                <Typography variant="body1" sx={{ mt: 2 }}>Caricamento in corso...</Typography>
             </div>
-        </motion.div>
+        </Backdrop>
     );
 }

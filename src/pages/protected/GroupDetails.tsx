@@ -15,7 +15,20 @@ import {
     selectGroupsLoading,
     updateGroup,
 } from "../../store/groups/groupsSlice.ts";
-import {Button, Card, Input, Modal} from "../../components/common";
+
+// Material UI imports (per i componenti che non hai ancora personalizzato)
+import {
+    Box, CircularProgress, Checkbox, Divider, 
+    FormControlLabel, Stack, Typography
+} from "@mui/material";
+import { ArrowBack, Edit, Delete, Check, Close } from "@mui/icons-material";
+
+// Componenti personalizzati
+import Card from "../../components/common/Card";
+import Button from "../../components/common/Button";
+import Badge from "../../components/common/Badge";
+import Input from "../../components/common/Input";
+import Modal from "../../components/common/Modal";
 
 /**
  * Page: Dettagli di un gruppo
@@ -231,209 +244,236 @@ export default function GroupDetails() {
     // ─────────────────────────────────────────────────────────────────────────────
 
     if (isLoading) {
-        return <div className="p-8 text-center">Caricamento dettagli gruppo...</div>;
+        return (
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '70vh' }}>
+                <CircularProgress />
+                <Typography variant="body1" sx={{ ml: 2 }}>Caricamento dettagli gruppo...</Typography>
+            </Box>
+        );
     }
 
     if (error) {
         return (
-            <div className="p-8 text-center">
-                <p className="text-red-600 mb-4">Si è verificato un errore: {error}</p>
+            <Box sx={{ textAlign: 'center', p: 4 }}>
+                <Typography variant="body1" color="error" sx={{ mb: 2 }}>
+                    Si è verificato un errore: {error}
+                </Typography>
                 {groupId && (
-                    <Button
-                        onClick={() => dispatch(fetchGroupDetails(groupId))}
-                        className="bg-blue-500 text-white px-4 py-2 rounded-md"
-                    >
+                    <Button onClick={() => dispatch(fetchGroupDetails(groupId))}>
                         Riprova
                     </Button>
                 )}
-            </div>
+            </Box>
         );
     }
 
     if (!group) {
         return (
-            <div className="p-8 text-center">
-                <p className="text-red-600 mb-4">Gruppo non trovato</p>
-                <Button
-                    onClick={() => navigate("/dashboard")}
-                >
+            <Box sx={{ textAlign: 'center', p: 4 }}>
+                <Typography variant="body1" color="error" sx={{ mb: 2 }}>
+                    Gruppo non trovato
+                </Typography>
+                <Button onClick={() => navigate("/dashboard")}>
                     Torna alla dashboard
                 </Button>
-            </div>
+            </Box>
         );
     }
 
     return (
-        <div className="p-4">
-            <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-semibold">Dettagli Gruppo</h2>
-                <Button
+        <Box sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                <Typography variant="h4">Dettagli Gruppo</Typography>
+                <Button 
+                    variant="outlined"
                     onClick={() => navigate("/dashboard")}
                 >
-                    ← Torna alla dashboard
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <ArrowBack sx={{ mr: 1 }} /> 
+                        Torna alla dashboard
+                    </Box>
                 </Button>
-            </div>
+            </Box>
 
             {/* Card Principale: Dettagli o Modifica */}
-            <Card title={isEditing ? "Modifica Gruppo" : `Gruppo: ${group.name}`} className="mb-6">
+            <Card 
+                title={isEditing ? "Modifica Gruppo" : `Gruppo: ${group.name}`}
+            >
                 {isEditing ? (
-                    <div className="space-y-3">
+                    <Stack spacing={3}>
                         {/* Nome gruppo */}
                         <Input
                             label="Nome del gruppo"
                             name="name"
                             value={editFormData.name}
                             onChange={handleInputChange}
-                            className="w-full"
-                            required
+                            required={true}
                         />
                         
                         {/* Richiedi password */}
-                        <div className="flex items-center mt-4">
-                            <input
-                                type="checkbox"
-                                id="require_password"
-                                name="require_password"
-                                checked={editFormData.require_password}
-                                onChange={handleInputChange}
-                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            <label htmlFor="require_password" className="ml-2 block text-sm text-gray-900">
-                                Richiedi password per entrare nel gruppo
-                            </label>
-                        </div>
+                        <FormControlLabel
+                            control={
+                                <Checkbox
+                                    name="require_password"
+                                    checked={editFormData.require_password}
+                                    onChange={handleInputChange}
+                                />
+                            }
+                            label="Richiedi password per entrare nel gruppo"
+                        />
                         
                         {/* Campo password (visibile solo se richiedi password è attivo) */}
                         {editFormData.require_password && (
-                            <div className="mt-4">
+                            <Box>
                                 <Input
                                     type="password"
                                     label="Password del gruppo"
                                     name="password"
                                     value={editFormData.password}
                                     onChange={handleInputChange}
-                                    className="w-full"
                                     required={editFormData.require_password}
                                     placeholder="Inserisci una password per l'accesso al gruppo"
                                 />
-                                <p className="text-xs text-gray-500 mt-1">
+                                <Typography variant="caption" color="textSecondary" sx={{ mt: 1, display: 'block' }}>
                                     Gli utenti dovranno fornire questa password per entrare nel gruppo
-                                </p>
-                            </div>
+                                </Typography>
+                            </Box>
                         )}
                         
                         {/* Pulsanti */}
-                        <div className="flex justify-end gap-2 pt-2">
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1, pt: 1 }}>
                             <Button
+                                variant="outlined"
                                 onClick={() => setIsEditing(false)}
-                                className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md"
                             >
                                 Annulla
                             </Button>
                             <Button
                                 onClick={handleSaveChanges}
-                                className="bg-blue-500 text-white px-4 py-2 rounded-md"
                                 disabled={!editFormData.name.trim() || 
                                         (editFormData.require_password && !editFormData.password.trim())}
                             >
                                 Salva Modifiche
                             </Button>
-                        </div>
-                    </div>
+                        </Box>
+                    </Stack>
                 ) : (
                     <>
-                        <p className="text-gray-600">
-                            TAG: <strong>{group.tag}</strong>
-                        </p>
-                        <p className="text-gray-600 mt-2">
+                        <Typography variant="body1" color="textSecondary">
+                            TAG: <Box component="span" fontWeight="bold">{group.tag}</Box>
+                        </Typography>
+                        <Typography variant="body1" color="textSecondary" sx={{ mt: 1 }}>
                             Creato il: {new Date(group.created_at).toLocaleDateString()}
-                        </p>
-                        <p className="text-gray-600">
-                            Ruolo: <strong>{group.user_role}</strong>
-                        </p>
-                        <p className="text-gray-600">
-                            Accesso: <strong>{group.require_password ? 'Protetto da password' : 'Libero'}</strong>
-                        </p>
+                        </Typography>
+                        <Typography variant="body1" color="textSecondary">
+                            Ruolo: <Box component="span" fontWeight="bold">{group.user_role}</Box>
+                        </Typography>
+                        <Typography variant="body1" color="textSecondary">
+                            Accesso: <Box component="span" fontWeight="bold">
+                            {group.require_password ? 'Protetto da password' : 'Libero'}
+                            </Box>
+                        </Typography>
 
                         {group.user_role === "admin" && (
-                            <div className="mt-4 pt-4 border-t border-gray-200 flex gap-2">
-                                <Button
-                                    onClick={() => setIsEditing(true)}
-                                    className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-                                >
-                                    ✏️ Modifica
-                                </Button>
-                                <Button
-                                    onClick={handleDeleteGroup}
-                                    className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
-                                >
-                                    🗑️ Elimina gruppo
-                                </Button>
-                            </div>
+                            <>
+                                <Divider sx={{ my: 2 }} />
+                                <Box sx={{ display: 'flex', gap: 1 }}>
+                                    <Button
+                                        onClick={() => setIsEditing(true)}
+                                    >
+                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <Edit sx={{ mr: 1 }} /> Modifica
+                                        </Box>
+                                    </Button>
+                                    <Button
+                                        color="secondary"
+                                        onClick={handleDeleteGroup}
+                                    >
+                                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                            <Delete sx={{ mr: 1 }} /> Elimina gruppo
+                                        </Box>
+                                    </Button>
+                                </Box>
+                            </>
                         )}
                     </>
                 )}
             </Card>
 
             {/* Sezione membri */}
-            <div className="mb-6">
-                <h3 className="text-xl font-semibold mb-2">Membri del gruppo</h3>
-                {!group.members || group.members.length === 0 ? (
-                    <p className="text-gray-500">Nessun membro nel gruppo.</p>
-                ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {group.members.map((member) => (
-                            <Card key={member.id} title={member.full_name || "Utente"}>
-                                <p className="text-sm text-gray-600">
-                                    Ruolo: {member.role || "Membro"}
-                                </p>
-                                {/* Se siamo admin, possiamo rimuovere i membri (tranne admin) */}
-                                {group.user_role === "admin" && member.role !== "admin" && (
-                                    <Button
-                                        onClick={() => handleRemoveMember(member.id, member.full_name)}
-                                        className="mt-2 bg-red-100 text-red-700 px-4 py-2 rounded-md hover:bg-red-200"
-                                    >
-                                        ❌ Rimuovi
-                                    </Button>
-                                )}
-                            </Card>
-                        ))}
-                    </div>
-                )}
-            </div>
+<Box sx={{ mb: 4 }}>
+    <Typography variant="h5" sx={{ mb: 2 }}>Membri del gruppo</Typography>
+    {!group.members || group.members.length === 0 ? (
+        <Typography variant="body2" color="textSecondary">Nessun membro nel gruppo.</Typography>
+    ) : (
+        <Stack spacing={2} direction={{ xs: 'column', md: 'row' }} flexWrap="wrap" useFlexGap sx={{ width: '100%' }}>
+            {group.members.map((member) => (
+                <Box key={member.id} sx={{ width: { xs: '100%', md: '48%' }, flexGrow: 1 }}>
+                    <Card title={member.full_name || "Utente"}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="body2" color="textSecondary">
+                                Ruolo: 
+                            </Typography>
+                            <Badge text={member.role || "Membro"} />
+                        </Box>
+                        {/* Se siamo admin, possiamo rimuovere i membri (tranne admin) */}
+                        {group.user_role === "admin" && member.role !== "admin" && (
+                            <Button
+                                variant="outlined"
+                                color="secondary"
+                                onClick={() => handleRemoveMember(member.id, member.full_name)}
+                            >
+                                <Box sx={{ display: 'flex', alignItems: 'center', mt: 2 }}>
+                                    <Close sx={{ mr: 1 }} /> Rimuovi
+                                </Box>
+                            </Button>
+                        )}
+                    </Card>
+                </Box>
+            ))}
+        </Stack>
+    )}
+</Box>
 
-            {/* Sezione richieste di ingresso (solo admin) */}
-            {group.user_role === "admin" && group.join_requests && group.join_requests.length > 0 && (
-                <div className="mb-6">
-                    <h3 className="text-xl font-semibold mb-2">Richieste di ingresso</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {group.join_requests
-                            .filter((r) => r.status === "pending")
-                            .map((request) => (
-                                <Card key={request.id} title={`Richiesta da: ${request.user_info?.full_name || "Utente"}`}>
-                                    <p className="text-sm text-gray-600">Stato: {request.status}</p>
-                                    <p className="text-sm text-gray-600">
-                                        Inviata il: {new Date(request.created_at).toLocaleDateString()}
-                                    </p>
-                                    <div className="mt-3 flex">
-                                        <Button
-                                            onClick={() => handleApproveRequest(request.id)}
-                                            className="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600 mr-2"
-                                        >
-                                            ✅ Approva
-                                        </Button>
-                                        <Button
-                                            onClick={() => handleDenyRequest(request.id)}
-                                            className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
-                                        >
-                                            ❌ Rifiuta
-                                        </Button>
-                                    </div>
-                                </Card>
-                            ))}
-                    </div>
-                </div>
-            )}
+{/* Sezione richieste di ingresso (solo admin) */}
+{group.user_role === "admin" && group.join_requests && group.join_requests.length > 0 && (
+    <Box sx={{ mb: 4 }}>
+        <Typography variant="h5" sx={{ mb: 2 }}>Richieste di ingresso</Typography>
+        <Stack spacing={2} direction={{ xs: 'column', md: 'row' }} flexWrap="wrap" useFlexGap sx={{ width: '100%' }}>
+            {group.join_requests
+                .filter((r) => r.status === "pending")
+                .map((request) => (
+                    <Box key={request.id} sx={{ width: { xs: '100%', md: '48%' }, flexGrow: 1 }}>
+                        <Card title={`Richiesta da: ${request.user_info?.full_name || "Utente"}`}>
+                            <Typography variant="body2" color="textSecondary">
+                                Stato: {request.status}
+                            </Typography>
+                            <Typography variant="body2" color="textSecondary">
+                                Inviata il: {new Date(request.created_at).toLocaleDateString()}
+                            </Typography>
+                            <Box sx={{ display: 'flex', mt: 2 }}>
+                                <Button
+                                    onClick={() => handleApproveRequest(request.id)}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', mr: 1 }}>
+                                        <Check sx={{ mr: 1 }} /> Approva
+                                    </Box>
+                                </Button>
+                                <Button
+                                    color="secondary"
+                                    onClick={() => handleDenyRequest(request.id)}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <Close sx={{ mr: 1 }} /> Rifiuta
+                                    </Box>
+                                </Button>
+                            </Box>
+                        </Card>
+                    </Box>
+                ))}
+        </Stack>
+    </Box>
+)}
 
             {/* Modale di conferma */}
             <Modal
@@ -441,24 +481,21 @@ export default function GroupDetails() {
                 isOpen={confirmationModal.isOpen}
                 onClose={() => setConfirmationModal({...confirmationModal, isOpen: false})}
             >
-                <div className="p-4">
-                    <p className="text-gray-600 mb-6">{confirmationModal.message}</p>
-                    <div className="flex justify-end gap-2">
-                        <Button
-                            onClick={() => setConfirmationModal({...confirmationModal, isOpen: false})}
-                            className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md hover:bg-gray-400"
-                        >
-                            Annulla
-                        </Button>
-                        <Button
-                            onClick={confirmAction}
-                            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
-                        >
-                            Conferma
-                        </Button>
-                    </div>
-                </div>
+                <Typography>{confirmationModal.message}</Typography>
+                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3, gap: 1 }}>
+                    <Button 
+                        variant="outlined"
+                        onClick={() => setConfirmationModal({...confirmationModal, isOpen: false})}
+                    >
+                        Annulla
+                    </Button>
+                    <Button 
+                        onClick={confirmAction}
+                    >
+                        Conferma
+                    </Button>
+                </Box>
             </Modal>
-        </div>
+        </Box>
     );
 }

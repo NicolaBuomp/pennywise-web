@@ -1,7 +1,7 @@
-import {useEffect, useState} from "react";
-import {useDispatch, useSelector} from "react-redux";
-import {AppDispatch} from "../../store/store.ts";
-import {Button, Card, Input, Modal} from "../../components/common";
+import { useEffect, useState } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import { AppDispatch } from "../../store/store";
+import { useNavigate } from "react-router-dom";
 import {
     createGroup,
     fetchGroups,
@@ -11,22 +11,10 @@ import {
     selectGroups,
     selectGroupsError,
     selectGroupsLoading,
-} from "../../store/groups/groupsSlice.ts";
-import {useNavigate} from "react-router-dom";
-
-
-const generateTag = (name: string): string => {
-    if (!name.trim()) return "";
-
-    // Rimuoviamo caratteri non alfanumerici
-    const cleanedName = name.replace(/[^a-zA-Z0-9]/g, "");
-    const uppercaseName = cleanedName.toUpperCase();
-
-    // Generiamo 4 cifre random
-    const randomDigits = Math.floor(1000 + Math.random() * 9000);
-
-    return `${uppercaseName}#${randomDigits}`;
-};
+} from "../../store/groups/groupsSlice";
+import { Card, Input, Modal, Button, Badge } from "../../components/common";
+import { Stack, Box, Typography, FormControlLabel, Checkbox } from "@mui/material";
+import { Spinner } from "../../components/feedback";
 
 export default function Dashboard() {
     const dispatch = useDispatch<AppDispatch>();
@@ -54,11 +42,9 @@ export default function Dashboard() {
     // ▶ Stato locale: Richiesta di ingresso
     const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
 
-    // ▶ Al mount, carichiamo i gruppi
     useEffect(() => {
         dispatch(fetchGroups());
         return () => {
-            // Puliamo eventuali errori se il componente viene smontato
             dispatch(resetGroupsError());
         };
     }, [dispatch]);
@@ -67,37 +53,17 @@ export default function Dashboard() {
         if (!searchTag.trim()) return;
         setIsSearching(true);
         setSearchError(null);
-        
 
         try {
             const result = await dispatch(searchGroupByTag(searchTag)).unwrap();
             setSearchedGroup(result || null);
-
-            if (!result) {
-                setSearchError("Nessun gruppo trovato con questo TAG");
-            }
+            if (!result) setSearchError("Nessun gruppo trovato con questo TAG");
         } catch (error: any) {
-            setSearchError(error.message || "Si è verificato un errore durante la ricerca");
+            setSearchError(error.message || "Errore nella ricerca");
             setSearchedGroup(null);
         } finally {
             setIsSearching(false);
         }
-    };
-
-    // ─────────────────────────────────────────────────────────────────────────────
-    // CREAZIONE GRUPPI
-    // ─────────────────────────────────────────────────────────────────────────────
-
-    // Aggiorna il tag in base al nome
-    const handleGroupNameChange = (value: string) => {
-        setGroupName(value);
-    };
-
-    // Resetta il form di creazione
-    const resetCreateGroupForm = () => {
-        setGroupName("");
-        setRequirePassword(false);
-        setPassword("");
     };
 
     const handleCreateGroup = async () => {
@@ -108,263 +74,149 @@ export default function Dashboard() {
             await dispatch(
                 createGroup({
                     name: groupName,
-                    ...(requirePassword ? {requirePassword, password} : {}),
+                    ...(requirePassword ? { requirePassword, password } : {}),
                 })
             ).unwrap();
 
-            // Dopo la creazione, chiudiamo il modal e resettiamo i campi
             setIsCreateModalOpen(false);
-            resetCreateGroupForm();
-
-            // Eventuale notifica di successo (opzionale)
-            alert("Gruppo creato con successo!");
+            setGroupName("");
+            setRequirePassword(false);
+            setPassword("");
         } catch (error: any) {
-            alert(error.message || "Si è verificato un errore nella creazione del gruppo");
+            alert(error.message || "Errore nella creazione del gruppo");
         } finally {
             setIsCreating(false);
         }
     };
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // RICHIESTA DI INGRESSO
-    // ─────────────────────────────────────────────────────────────────────────────
-
     const handleRequestJoin = async () => {
         if (!searchedGroup?.id) return;
         
-        // Check if password is required but not provided
         if (searchedGroup.require_password && !joinPassword.trim()) {
             alert("Questo gruppo richiede una password per entrare.");
             return;
         }
         
         try {
-            // Pass the password as a parameter to the action
             await dispatch(requestJoinGroup({
                 groupId: searchedGroup.id,
                 password: joinPassword
             })).unwrap();
             
             setIsRequestModalOpen(false);
-            setJoinPassword(""); // Clear the password field
+            setJoinPassword("");
             alert("Richiesta inviata con successo!");
-            setSearchedGroup(null); // Clear the searched group after request
-            setSearchTag(""); // Clear the search field
+            setSearchedGroup(null);
+            setSearchTag("");
         } catch (error: any) {
-            alert(error.message || "Si è verificato un errore nell'invio della richiesta");
+            alert(error.message || "Errore nell'invio della richiesta");
         }
     };
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // RENDER
-    // ─────────────────────────────────────────────────────────────────────────────
-
     return (
-        <div className="p-4">
-            <h2 className="text-2xl font-semibold mb-4">I tuoi gruppi</h2>
+        <Stack spacing={3} mt={4} width="100%" maxWidth="800px" mx="auto">
+            <Typography variant="h4">I tuoi gruppi</Typography>
 
-            {/* Pulsante per creare un nuovo gruppo */}
-            <div className="flex justify-end mb-4">
-                <Button
-                    onClick={() => setIsCreateModalOpen(true)}
-                    className="bg-green-500 text-white px-4 py-2 rounded-md"
-                >
-                    ➕ Crea Gruppo
+            {/* Pulsante Crea Gruppo */}
+            <Box display="flex" justifyContent="flex-end">
+                <Button variant="contained" color="primary" onClick={() => setIsCreateModalOpen(true)}>
+                    Crea Gruppo
                 </Button>
-            </div>
+            </Box>
 
             {/* Campo di ricerca per TAG */}
-            <div className="flex gap-2 mt-4 mb-6">
-                <Input
-                    type="text"
-                    value={searchTag}
+            <Stack direction="row" spacing={2}>
+                <Input 
+                    label="Cerca un gruppo per TAG" 
+                    value={searchTag} 
                     onChange={(e) => setSearchTag(e.target.value)}
-                    placeholder="Cerca un gruppo per TAG"
-                    className="border p-2 rounded-md w-full"
                     disabled={isSearching}
                 />
-                <Button
-                    onClick={handleSearchGroup}
-                    className="bg-blue-500 text-white px-4 py-2 rounded-md disabled:bg-blue-300"
+                <Button 
+                    variant="contained" 
+                    color="secondary" 
+                    onClick={handleSearchGroup} 
                     disabled={isSearching || !searchTag.trim()}
                 >
-                    {isSearching ? "Cercando..." : "🔍 Cerca"}
+                    {isSearching ? <Spinner /> : "Cerca"}
                 </Button>
-            </div>
+            </Stack>
 
-            {/* Eventuale messaggio di errore nella ricerca */}
-            {searchError && (
-                <div className="mb-4 p-2 bg-red-100 text-red-700 rounded-md">
-                    {searchError}
-                </div>
-            )}
+            {searchError && <Typography color="error">{searchError}</Typography>}
 
             {/* Risultato ricerca */}
             {searchedGroup && (
-                <div className="mb-6 mt-4">
-                    <h3 className="text-lg font-medium mb-2">Risultato ricerca</h3>
-                    <Card title={searchedGroup.name} className="border-2 border-green-400">
-                        <p className="text-gray-600">TAG: {searchedGroup.tag}</p>
-                        {searchedGroup.description && (
-                            <p className="text-gray-600 mt-2">{searchedGroup.description}</p>
-                        )}
-                        <Button
-                            onClick={() => setIsRequestModalOpen(true)}
-                            className="mt-4 bg-green-500 text-white px-4 py-2 rounded-md"
-                        >
-                            ✋ Richiedi di entrare
-                        </Button>
-                    </Card>
-                </div>
+                <Card title={searchedGroup.name}>
+                    <Typography variant="body2">TAG: {searchedGroup.tag}</Typography>
+                    <Button variant="contained" color="secondary" onClick={() => setIsRequestModalOpen(true)}>
+                        ✋ Richiedi di entrare
+                    </Button>
+                </Card>
             )}
 
-            {/* Separatore */}
-            <div className="border-t border-gray-200 my-6"></div>
-
-            {/* Lista gruppi dell'utente */}
-            <h3 className="text-lg font-medium mb-4">Gruppi di cui sei membro</h3>
+            {/* Lista gruppi */}
             {groupsLoading ? (
-                <div className="text-center py-8">Caricamento gruppi in corso...</div>
-            ) : groupsError ? (
-                <div className="text-center py-8 text-red-600">
-                    Errore: {groupsError}
-                </div>
-            ) : groups?.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                    <p>Non sei ancora membro di nessun gruppo.</p>
-                    <p className="mt-2">Crea un gruppo o cerca un gruppo per TAG per unirti!</p>
-                </div>
+                <Box display="flex" justifyContent="center"><Spinner /></Box>
+            ) : groups.length === 0 ? (
+                <Typography textAlign="center" color="text.secondary">
+                    Non sei ancora membro di nessun gruppo.
+                </Typography>
             ) : (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <Stack spacing={2}>
                     {groups.map((group) => (
-                        <Card
-                            key={group.id}
-                            title={group.name}
-                            onClick={() => navigate(`/groups/${group.id}`)}
-                            className="cursor-pointer hover:shadow-md transition-shadow"
-                        >
-                            <p className="text-sm text-gray-600">TAG: {group.tag}</p>
-                            {group.description && (
-                                <p className="text-sm text-gray-600 mt-1">{group.description}</p>
-                            )}
-                            <p className="text-sm text-gray-600 mt-1">
-                                Ruolo: <strong>{group.userRole || "Membro"}</strong>
-                            </p>
-                            {group.membersCount && (
-                                <p className="text-sm text-gray-600 mt-1">
-                                    Membri: <strong>{group.membersCount}</strong>
-                                </p>
-                            )}
+                        <Card key={group.id} onClick={() => navigate(`/groups/${group.id}`)}>
+                            <Typography variant="h6">{group.name}</Typography>
+                            <Typography variant="body2">TAG: {group.tag}</Typography>
+                            <Badge text={group.user_role || "Membro"} />
                         </Card>
                     ))}
-                </div>
+                </Stack>
             )}
 
-            {/* Modale per la creazione del gruppo */}
-            <Modal
-                title="Crea un nuovo gruppo"
-                isOpen={isCreateModalOpen}
-                onClose={() => setIsCreateModalOpen(false)}
-            >
-                <Input
-                    type="text"
-                    value={groupName}
-                    onChange={(e) => handleGroupNameChange(e.target.value)}
-                    placeholder="Nome del gruppo"
-                    className="w-full border p-2 rounded-md"
-                />
-
-                {requirePassword && (
-                    <Input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Password del gruppo"
-                        className="w-full border p-2 rounded-md mt-2"
+            {/* Modale Creazione Gruppo */}
+            <Modal title="Crea un nuovo gruppo" isOpen={isCreateModalOpen} onClose={() => setIsCreateModalOpen(false)}>
+                <Stack spacing={2}>
+                    <Input label="Nome del gruppo" value={groupName} onChange={(e) => setGroupName(e.target.value)} />
+                    <FormControlLabel
+                        control={<Checkbox checked={requirePassword} onChange={() => setRequirePassword(!requirePassword)} />}
+                        label="Proteggi con password?"
                     />
-                )}
-
-                {/* Checkbox per protezione con password */}
-                <div className="mt-3 flex items-center gap-2">
-                    <input
-                        type="checkbox"
-                        checked={requirePassword}
-                        onChange={() => setRequirePassword(!requirePassword)}
-                        className="h-5 w-5"
-                    />
-                    <span>Proteggi con password?</span>
-                </div>
-
-
-
-                <Button
-                    onClick={handleCreateGroup}
-                    className="mt-4 w-full bg-green-500 text-white py-2 rounded-md"
-                    disabled={
-                        !groupName.trim() ||
-                        (requirePassword && !password.trim()) ||
-                        isCreating
-                    }
-                >
-                    {isCreating ? "Creando..." : "➕ Crea Gruppo"}
-                </Button>
+                    {requirePassword && <Input label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} />}
+                    <Button onClick={handleCreateGroup} disabled={isCreating}>
+                        {isCreating ? <Spinner /> : "Crea Gruppo"}
+                    </Button>
+                </Stack>
             </Modal>
 
-            {/* Modale di conferma per la richiesta di ingresso */}
-            <Modal
-    title="Richiedi di entrare"
-    isOpen={isRequestModalOpen}
-    onClose={() => {
-        setIsRequestModalOpen(false);
-        setJoinPassword(""); // Clear password when closing
-    }}
->
-    <div className="p-4">
-        <p className="mb-4">
-            Vuoi richiedere di entrare nel gruppo <strong>{searchedGroup?.name}</strong>?
-        </p>
-        <p className="text-sm text-gray-600 mb-4">
-            La tua richiesta dovrà essere approvata dall'amministratore del gruppo.
-        </p>
-        
-        {/* Mostra campo password solo se necessario */}
-        {searchedGroup?.require_password && (
-            <div className="mb-4">
-                <p className="text-sm font-semibold mb-2">
-                    ⚠️ Questo gruppo è protetto da password
-                </p>
-                <Input
-                    type="password"
-                    label="Password del gruppo"
-                    value={joinPassword}
-                    onChange={(e) => setJoinPassword(e.target.value)}
-                    placeholder="Inserisci la password del gruppo"
-                    className="w-full"
-                    required
-                />
-            </div>
-        )}
-        
-        <div className="flex justify-end gap-2 mt-4">
-            <Button
-                onClick={() => {
-                    setIsRequestModalOpen(false);
-                    setJoinPassword("");
-                }}
-                className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md"
-            >
-                Annulla
-            </Button>
-            <Button
-                onClick={handleRequestJoin}
-                className="bg-green-500 text-white px-4 py-2 rounded-md"
-                disabled={searchedGroup?.require_password && !joinPassword.trim()}
-            >
-                Conferma
-            </Button>
-        </div>
-    </div>
-</Modal>
-        </div>
+            {/* Modale Richiesta di ingresso - QUESTA È LA PARTE MANCANTE */}
+        <Modal 
+            title="Richiedi di entrare nel gruppo" 
+            isOpen={isRequestModalOpen} 
+            onClose={() => setIsRequestModalOpen(false)}
+        >
+            <Stack spacing={2}>
+                {searchedGroup?.require_password && (
+                    <Input 
+                        label="Password del gruppo" 
+                        type="password" 
+                        value={joinPassword}
+                        onChange={(e) => setJoinPassword(e.target.value)}
+                    />
+                )}
+                <Typography variant="body2">
+                    {searchedGroup?.require_password 
+                        ? "Questo gruppo richiede una password per entrare."
+                        : "Vuoi davvero richiedere l'accesso a questo gruppo?"}
+                </Typography>
+                <Button 
+                    variant="contained" 
+                    color="primary" 
+                    onClick={handleRequestJoin}
+                >
+                    Richiedi di entrare
+                </Button>
+            </Stack>
+        </Modal>
+        </Stack>
     );
 }

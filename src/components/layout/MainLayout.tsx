@@ -1,29 +1,24 @@
-import {Outlet} from "react-router-dom";
+import { Outlet } from "react-router-dom";
+import { Box, Container } from "@mui/material";
 import Navbar from "./Navbar";
 import Sidebar from "./Sidebar";
-import {Breadcrumbs} from "./index.tsx";
 
 export default function MainLayout() {
     return (
-        <div className="flex h-screen bg-[var(--color-bg)] text-[var(--color-text)]">
+        <Box display="flex" height="100vh">
             {/* Sidebar */}
-            <Sidebar/>
+            <Sidebar />
 
             {/* Contenuto principale */}
-            <div className="flex flex-col flex-1">
+            <Box display="flex" flexDirection="column" flex={1} bgcolor="background.default">
                 {/* Navbar */}
-                <Navbar/>
-
-                {/* Breadcrumbs come titolo di pagina */}
-                <div className="px-6 pt-4">
-                    <Breadcrumbs/>
-                </div>
+                <Navbar />
 
                 {/* Contenuto dinamico delle pagine */}
-                <main className="p-4 md:p-6 overflow-y-auto min-h-[calc(100vh-56px)]">
-                    <Outlet/>
-                </main>
-            </div>
-        </div>
+                <Container sx={{ py: 4, flexGrow: 1, overflowY: "auto", minHeight: "calc(100vh - 56px)" }}>
+                    <Outlet />
+                </Container>
+            </Box>
+        </Box>
     );
 }

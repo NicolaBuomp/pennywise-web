@@ -12,6 +12,8 @@ export interface ProfileDto {
     avatar_url?: string;
     created_at: string;
     updated_at: string;
+    language: string;
+    currency: string;
 }
 
 // Interfaccia per la risposta dell'API quando si carica l'avatar

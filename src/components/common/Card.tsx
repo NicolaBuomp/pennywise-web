@@ -1,24 +1,33 @@
-import React from "react";
+import { Card as MUICard, CardContent, CardHeader, Skeleton, Box } from "@mui/material";
 
 type CardProps = {
-    title: string;
+    title?: string;
     subtitle?: string;
-    onClick?: () => void;
-    className?: string;
     children: React.ReactNode;
+    loading?: boolean;
+    onClick?: () => void;
 };
 
-export default function Card({title, subtitle, children, onClick, className}: CardProps) {
+export default function Card({ title, subtitle, children, onClick, loading = false }: CardProps) {
     return (
-        <div
-            className={`p-6 rounded-xl shadow-lg glass ${className}  ${onClick ? "cursor-pointer" : ""}`}
-            onClick={onClick}
-        >
-            <h2 className={`text-xl font-semibold text-[var(--color-text)] ${subtitle ? "mb-1" : "mb-3"}`}>
-                {title}
-            </h2>
-            {subtitle && <p className="text-[var(--color-text-soft)] text-sm">{subtitle}</p>}
-            {children}
-        </div>
+        <MUICard onClick={onClick} sx={{ cursor: onClick ? "pointer" : "default" }}>
+            <CardHeader
+                title={loading ? <Skeleton variant="text" width="60%" height={24} /> : title}
+                subheader={loading ? <Skeleton variant="text" width="40%" height={18} /> : subtitle}
+            />
+            <CardContent>
+                {loading ? (
+                    <>
+                        <Skeleton variant="text" width="100%" height={18} />
+                        <Skeleton variant="text" width="80%" height={18} sx={{ mt: 1 }} />
+                        <Skeleton variant="rectangular" width="100%" height={120} sx={{ mt: 2, borderRadius: 1 }} />
+                    </>
+                ) : (
+                    <Box>
+                        {children}
+                    </Box>
+                )}
+            </CardContent>
+        </MUICard>
     );
 }

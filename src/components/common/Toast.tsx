@@ -1,34 +1,18 @@
-import {motion} from "framer-motion";
-import {useEffect} from "react";
+import { Snackbar, Alert as MUIAlert } from "@mui/material";
 
 type ToastProps = {
     message: string;
     type?: "success" | "error" | "info";
+    open: boolean;
     onClose: () => void;
 };
 
-export default function Toast({message, type = "info", onClose}: ToastProps) {
-    useEffect(() => {
-        const timer = setTimeout(() => {
-            onClose();
-        }, 3000);
-        return () => clearTimeout(timer);
-    }, [onClose]);
-
-    const colors = {
-        success: "bg-green-500",
-        error: "bg-red-500",
-        info: "bg-blue-500",
-    };
-
+export default function Toast({ message, type = "info", open, onClose }: ToastProps) {
     return (
-        <motion.div
-            initial={{opacity: 0, y: -20}}
-            animate={{opacity: 1, y: 0}}
-            exit={{opacity: 0, y: -20}}
-            className={`fixed top-4 right-4 px-4 py-2 rounded-lg text-white shadow-lg ${colors[type]}`}
-        >
-            {message}
-        </motion.div>
+        <Snackbar open={open} autoHideDuration={3000} onClose={onClose} anchorOrigin={{ vertical: "top", horizontal: "right" }}>
+            <MUIAlert onClose={onClose} severity={type} variant="filled">
+                {message}
+            </MUIAlert>
+        </Snackbar>
     );
 }
