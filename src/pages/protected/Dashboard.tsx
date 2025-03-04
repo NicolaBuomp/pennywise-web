@@ -14,10 +14,7 @@ import {
 } from "../../store/groups/groupsSlice.ts";
 import {useNavigate} from "react-router-dom";
 
-/**
- * Funzione per generare un TAG univoco in base al nome del gruppo.
- * Esempio: "Test" -> "TEST#4312"
- */
+
 const generateTag = (name: string): string => {
     if (!name.trim()) return "";
 
@@ -49,10 +46,10 @@ export default function Dashboard() {
     // ▶ Stato locale: Creazione gruppo
     const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
     const [groupName, setGroupName] = useState("");
-    const [groupTag, setGroupTag] = useState("");
     const [requirePassword, setRequirePassword] = useState(false);
     const [password, setPassword] = useState("");
     const [isCreating, setIsCreating] = useState(false);
+    const [joinPassword, setJoinPassword] = useState("");
 
     // ▶ Stato locale: Richiesta di ingresso
     const [isRequestModalOpen, setIsRequestModalOpen] = useState(false);
@@ -66,14 +63,11 @@ export default function Dashboard() {
         };
     }, [dispatch]);
 
-    // ─────────────────────────────────────────────────────────────────────────────
-    // RICERCA GRUPPI
-    // ─────────────────────────────────────────────────────────────────────────────
-
     const handleSearchGroup = async () => {
         if (!searchTag.trim()) return;
         setIsSearching(true);
         setSearchError(null);
+        
 
         try {
             const result = await dispatch(searchGroupByTag(searchTag)).unwrap();
@@ -97,26 +91,23 @@ export default function Dashboard() {
     // Aggiorna il tag in base al nome
     const handleGroupNameChange = (value: string) => {
         setGroupName(value);
-        setGroupTag(generateTag(value));
     };
 
     // Resetta il form di creazione
     const resetCreateGroupForm = () => {
         setGroupName("");
-        setGroupTag("");
         setRequirePassword(false);
         setPassword("");
     };
 
     const handleCreateGroup = async () => {
-        if (!groupName.trim() || !groupTag.trim()) return;
+        if (!groupName.trim()) return;
         setIsCreating(true);
 
         try {
             await dispatch(
                 createGroup({
                     name: groupName,
-                    tag: groupTag,
                     ...(requirePassword ? {requirePassword, password} : {}),
                 })
             ).unwrap();
@@ -139,11 +130,26 @@ export default function Dashboard() {
     // ─────────────────────────────────────────────────────────────────────────────
 
     const handleRequestJoin = async () => {
-        if (!searchedGroup) return;
+        if (!searchedGroup?.id) return;
+        
+        // Check if password is required but not provided
+        if (searchedGroup.require_password && !joinPassword.trim()) {
+            alert("Questo gruppo richiede una password per entrare.");
+            return;
+        }
+        
         try {
-            await dispatch(requestJoinGroup(searchedGroup.tag)).unwrap();
+            // Pass the password as a parameter to the action
+            await dispatch(requestJoinGroup({
+                groupId: searchedGroup.id,
+                password: joinPassword
+            })).unwrap();
+            
             setIsRequestModalOpen(false);
+            setJoinPassword(""); // Clear the password field
             alert("Richiesta inviata con successo!");
+            setSearchedGroup(null); // Clear the searched group after request
+            setSearchTag(""); // Clear the search field
         } catch (error: any) {
             alert(error.message || "Si è verificato un errore nell'invio della richiesta");
         }
@@ -267,13 +273,16 @@ export default function Dashboard() {
                     placeholder="Nome del gruppo"
                     className="w-full border p-2 rounded-md"
                 />
-                <Input
-                    type="text"
-                    value={groupTag}
-                    disabled={true}
-                    placeholder="TAG del gruppo"
-                    className="w-full border p-2 rounded-md mt-2 bg-gray-200"
-                />
+
+                {requirePassword && (
+                    <Input
+                        type="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        placeholder="Password del gruppo"
+                        className="w-full border p-2 rounded-md mt-2"
+                    />
+                )}
 
                 {/* Checkbox per protezione con password */}
                 <div className="mt-3 flex items-center gap-2">
@@ -286,22 +295,13 @@ export default function Dashboard() {
                     <span>Proteggi con password?</span>
                 </div>
 
-                {requirePassword && (
-                    <Input
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        placeholder="Password del gruppo"
-                        className="w-full border p-2 rounded-md mt-2"
-                    />
-                )}
+
 
                 <Button
                     onClick={handleCreateGroup}
                     className="mt-4 w-full bg-green-500 text-white py-2 rounded-md"
                     disabled={
                         !groupName.trim() ||
-                        !groupTag.trim() ||
                         (requirePassword && !password.trim()) ||
                         isCreating
                     }
@@ -312,33 +312,59 @@ export default function Dashboard() {
 
             {/* Modale di conferma per la richiesta di ingresso */}
             <Modal
-                title="Richiedi di entrare"
-                isOpen={isRequestModalOpen}
-                onClose={() => setIsRequestModalOpen(false)}
+    title="Richiedi di entrare"
+    isOpen={isRequestModalOpen}
+    onClose={() => {
+        setIsRequestModalOpen(false);
+        setJoinPassword(""); // Clear password when closing
+    }}
+>
+    <div className="p-4">
+        <p className="mb-4">
+            Vuoi richiedere di entrare nel gruppo <strong>{searchedGroup?.name}</strong>?
+        </p>
+        <p className="text-sm text-gray-600 mb-4">
+            La tua richiesta dovrà essere approvata dall'amministratore del gruppo.
+        </p>
+        
+        {/* Mostra campo password solo se necessario */}
+        {searchedGroup?.require_password && (
+            <div className="mb-4">
+                <p className="text-sm font-semibold mb-2">
+                    ⚠️ Questo gruppo è protetto da password
+                </p>
+                <Input
+                    type="password"
+                    label="Password del gruppo"
+                    value={joinPassword}
+                    onChange={(e) => setJoinPassword(e.target.value)}
+                    placeholder="Inserisci la password del gruppo"
+                    className="w-full"
+                    required
+                />
+            </div>
+        )}
+        
+        <div className="flex justify-end gap-2 mt-4">
+            <Button
+                onClick={() => {
+                    setIsRequestModalOpen(false);
+                    setJoinPassword("");
+                }}
+                className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md"
             >
-                <div className="p-4">
-                    <p className="mb-4">
-                        Vuoi richiedere di entrare nel gruppo <strong>{searchedGroup?.name}</strong>?
-                    </p>
-                    <p className="text-sm text-gray-600 mb-6">
-                        La tua richiesta dovrà essere approvata dall'amministratore del gruppo.
-                    </p>
-                    <div className="flex justify-end gap-2">
-                        <Button
-                            onClick={() => setIsRequestModalOpen(false)}
-                            className="bg-gray-300 text-gray-800 px-4 py-2 rounded-md"
-                        >
-                            Annulla
-                        </Button>
-                        <Button
-                            onClick={handleRequestJoin}
-                            className="bg-green-500 text-white px-4 py-2 rounded-md"
-                        >
-                            Conferma
-                        </Button>
-                    </div>
-                </div>
-            </Modal>
+                Annulla
+            </Button>
+            <Button
+                onClick={handleRequestJoin}
+                className="bg-green-500 text-white px-4 py-2 rounded-md"
+                disabled={searchedGroup?.require_password && !joinPassword.trim()}
+            >
+                Conferma
+            </Button>
+        </div>
+    </div>
+</Modal>
         </div>
     );
 }

@@ -5,6 +5,7 @@ type InputProps = {
     label?: string;
     type?: string;
     placeholder?: string;
+    required?: boolean;
     value?: string;
     onChange?: (e: React.ChangeEvent<HTMLInputElement>) => void;
     disabled?: boolean;
@@ -17,6 +18,7 @@ export default function Input({
                                   label,
                                   name,
                                   placeholder,
+                                  required,
                                   value,
                                   onChange,
                                   disabled,
@@ -27,6 +29,7 @@ export default function Input({
             {label && <label className="text-sm font-semibold text-[var(--color-text)]">{label}</label>}
             <input
                 name={name}
+                required={required}
                 type={type}
                 placeholder={placeholder}
                 value={value}

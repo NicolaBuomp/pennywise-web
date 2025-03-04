@@ -7,7 +7,6 @@ import {
     deleteGroup,
     denyJoinRequest,
     fetchGroupDetails,
-    fetchJoinRequests,
     removeMember,
     resetCurrentGroup,
     resetGroupsError,
@@ -56,7 +55,8 @@ export default function GroupDetails() {
     const [isEditing, setIsEditing] = useState(false);
     const [editFormData, setEditFormData] = useState({
         name: "",
-        tag: "",
+        require_password: false,
+        password: "",
     });
 
     // ▶ Lifecycle
@@ -71,19 +71,13 @@ export default function GroupDetails() {
         };
     }, [dispatch, groupId]);
 
-    useEffect(() => {
-        // Se l'utente è admin, carichiamo le joinRequests
-        if (group && group.userRole === "admin" && groupId) {
-            dispatch(fetchJoinRequests(groupId));
-        }
-    }, [dispatch, group?.userRole, groupId]);
-
     // Quando i dettagli del gruppo cambiano, popola il form di modifica
     useEffect(() => {
         if (group) {
             setEditFormData({
                 name: group.name || "",
-                tag: group.tag || "",
+                require_password: group.require_password || false,
+                password: "", // Password non viene mai restituita dall'API
             });
         }
     }, [group]);
@@ -139,19 +133,51 @@ export default function GroupDetails() {
     const handleInputChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
     ) => {
-        const {name, value} = e.target;
-        setEditFormData((prev) => ({...prev, [name]: value}));
+        const {name, value, type, checked} = e.target as HTMLInputElement;
+        
+        // Gestisce i checkbox
+        if (type === 'checkbox') {
+            setEditFormData((prev) => ({...prev, [name]: checked}));
+            
+            // Se disabilita la password, resetta il campo password
+            if (name === 'require_password' && !checked) {
+                setEditFormData((prev) => ({...prev, password: ''}));
+            }
+        } else {
+            setEditFormData((prev) => ({...prev, [name]: value}));
+        }
     };
 
     const handleSaveChanges = async () => {
         if (!groupId) return;
+        
+        // Valida il form
+        if (!editFormData.name.trim()) {
+            alert("Il nome del gruppo è obbligatorio.");
+            return;
+        }
+        
+        if (editFormData.require_password && !editFormData.password.trim()) {
+            alert("La password è obbligatoria quando l'accesso è protetto da password.");
+            return;
+        }
+        
         try {
+            // Prepara i dati da inviare
+            const groupData: any = {
+                name: editFormData.name,
+                require_password: editFormData.require_password,
+            };
+            
+            // Aggiungi password solo se necessario
+            if (editFormData.require_password) {
+                groupData.password = editFormData.password;
+            }
+            
             await dispatch(
                 updateGroup({
                     groupId,
-                    groupData: {
-                        name: editFormData.name,
-                    },
+                    groupData
                 })
             ).unwrap();
             setIsEditing(false);
@@ -252,32 +278,51 @@ export default function GroupDetails() {
             <Card title={isEditing ? "Modifica Gruppo" : `Gruppo: ${group.name}`} className="mb-6">
                 {isEditing ? (
                     <div className="space-y-3">
+                        {/* Nome gruppo */}
                         <Input
                             label="Nome del gruppo"
                             name="name"
                             value={editFormData.name}
                             onChange={handleInputChange}
                             className="w-full"
+                            required
                         />
-                        <Input
-                            label="TAG"
-                            name="tag"
-                            value={editFormData.tag}
-                            readOnly
-                            className="w-full bg-gray-100"
-                        />
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                                Descrizione
-                            </label>
-                            <textarea
-                                name="description"
-                                value={editFormData.description}
+                        
+                        {/* Richiedi password */}
+                        <div className="flex items-center mt-4">
+                            <input
+                                type="checkbox"
+                                id="require_password"
+                                name="require_password"
+                                checked={editFormData.require_password}
                                 onChange={handleInputChange}
-                                className="w-full border p-2 rounded-md resize-none h-24"
-                                placeholder="Descrizione del gruppo"
+                                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                             />
+                            <label htmlFor="require_password" className="ml-2 block text-sm text-gray-900">
+                                Richiedi password per entrare nel gruppo
+                            </label>
                         </div>
+                        
+                        {/* Campo password (visibile solo se richiedi password è attivo) */}
+                        {editFormData.require_password && (
+                            <div className="mt-4">
+                                <Input
+                                    type="password"
+                                    label="Password del gruppo"
+                                    name="password"
+                                    value={editFormData.password}
+                                    onChange={handleInputChange}
+                                    className="w-full"
+                                    required={editFormData.require_password}
+                                    placeholder="Inserisci una password per l'accesso al gruppo"
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Gli utenti dovranno fornire questa password per entrare nel gruppo
+                                </p>
+                            </div>
+                        )}
+                        
+                        {/* Pulsanti */}
                         <div className="flex justify-end gap-2 pt-2">
                             <Button
                                 onClick={() => setIsEditing(false)}
@@ -288,7 +333,8 @@ export default function GroupDetails() {
                             <Button
                                 onClick={handleSaveChanges}
                                 className="bg-blue-500 text-white px-4 py-2 rounded-md"
-                                disabled={!editFormData.name.trim()}
+                                disabled={!editFormData.name.trim() || 
+                                        (editFormData.require_password && !editFormData.password.trim())}
                             >
                                 Salva Modifiche
                             </Button>
@@ -299,17 +345,17 @@ export default function GroupDetails() {
                         <p className="text-gray-600">
                             TAG: <strong>{group.tag}</strong>
                         </p>
-                        {group.description && (
-                            <p className="text-gray-600 mt-2">{group.description}</p>
-                        )}
                         <p className="text-gray-600 mt-2">
                             Creato il: {new Date(group.created_at).toLocaleDateString()}
                         </p>
                         <p className="text-gray-600">
-                            Ruolo: <strong>{group.userRole}</strong>
+                            Ruolo: <strong>{group.user_role}</strong>
+                        </p>
+                        <p className="text-gray-600">
+                            Accesso: <strong>{group.require_password ? 'Protetto da password' : 'Libero'}</strong>
                         </p>
 
-                        {group.userRole === "admin" && (
+                        {group.user_role === "admin" && (
                             <div className="mt-4 pt-4 border-t border-gray-200 flex gap-2">
                                 <Button
                                     onClick={() => setIsEditing(true)}
@@ -342,7 +388,7 @@ export default function GroupDetails() {
                                     Ruolo: {member.role || "Membro"}
                                 </p>
                                 {/* Se siamo admin, possiamo rimuovere i membri (tranne admin) */}
-                                {group.userRole === "admin" && (
+                                {group.user_role === "admin" && member.role !== "admin" && (
                                     <Button
                                         onClick={() => handleRemoveMember(member.id, member.full_name)}
                                         className="mt-2 bg-red-100 text-red-700 px-4 py-2 rounded-md hover:bg-red-200"
@@ -357,14 +403,14 @@ export default function GroupDetails() {
             </div>
 
             {/* Sezione richieste di ingresso (solo admin) */}
-            {group.userRole === "admin" && group.join_requests && group.join_requests.length > 0 && (
+            {group.user_role === "admin" && group.join_requests && group.join_requests.length > 0 && (
                 <div className="mb-6">
                     <h3 className="text-xl font-semibold mb-2">Richieste di ingresso</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {group.join_requests
                             .filter((r) => r.status === "pending")
                             .map((request) => (
-                                <Card key={request.id} title={`Richiesta da: ${request.user?.full_name || "Utente"}`}>
+                                <Card key={request.id} title={`Richiesta da: ${request.user_info?.full_name || "Utente"}`}>
                                     <p className="text-sm text-gray-600">Stato: {request.status}</p>
                                     <p className="text-sm text-gray-600">
                                         Inviata il: {new Date(request.created_at).toLocaleDateString()}

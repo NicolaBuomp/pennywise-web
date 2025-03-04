@@ -18,9 +18,7 @@ export interface JoinRequest {
     id: string;
     status: JoinRequestStatus;
     created_at: string;
-    user?: User;
-    user_id?: string;
-    group_id?: string;
+    user_info?: User;
 }
 
 export interface Group {
@@ -29,8 +27,8 @@ export interface Group {
     tag: string;
     require_password: boolean;
     created_at: string;
-    userRole?: string;
-    adminId?: string;
+    user_role?: string;
+    admin_id?: string; 
     members?: User[];
     join_requests?: JoinRequest[];
     members_count?: number;
@@ -91,8 +89,9 @@ export const fetchGroups = createAsyncThunk(
 export const searchGroupByTag = createAsyncThunk(
     'groups/searchGroupByTag',
     async (tag: string, {rejectWithValue}) => {
+        
         try {
-            return await api.get(`/groups/tag/${tag}`);
+            return await api.post(`/groups/search-by-tag`, {tag: tag});
         } catch (error) {
             return rejectWithValue(handleGroupsError(error, 'Gruppo non trovato'));
         }
@@ -105,7 +104,6 @@ export const createGroup = createAsyncThunk(
     async (
         groupData: {
             name: string;
-            tag: string;
             requirePassword?: boolean;
             password?: string;
         },
@@ -125,7 +123,8 @@ export const fetchGroupDetails = createAsyncThunk(
     'groups/fetchGroupDetails',
     async (groupId: string, {rejectWithValue}) => {
         try {
-            return await api.get(`/groups/${groupId}`);
+            const resp = await api.get(`/groups/${groupId}`);
+            return resp;
         } catch (error) {
             return rejectWithValue(handleGroupsError(error, 'Impossibile recuperare i dettagli del gruppo'));
         }
@@ -141,12 +140,12 @@ export const updateGroup = createAsyncThunk(
             groupData,
         }: {
             groupId: string;
-            groupData: Partial<Pick<Group, 'name' | 'tag' | 'description'>>;
+            groupData: Partial<Pick<Group, 'name'>>;
         },
         {dispatch, rejectWithValue}
     ) => {
         try {
-            await api.put(`/groups/${groupId}`, groupData);
+            await api.patch(`/groups/${groupId}`, groupData);
             dispatch(fetchGroups());
         } catch (error) {
             return rejectWithValue(handleGroupsError(error, 'Impossibile aggiornare il gruppo'));
@@ -159,7 +158,7 @@ export const deleteGroup = createAsyncThunk(
     'groups/deleteGroup',
     async (groupId: string, {dispatch, rejectWithValue}) => {
         try {
-            await api.delete(`/groups/${groupId}`);
+            await api.delete(`/groups/delete/${groupId}`);
             dispatch(fetchGroups());
         } catch (error) {
             return rejectWithValue(handleGroupsError(error, 'Impossibile eliminare il gruppo'));
@@ -175,7 +174,7 @@ export const removeMember = createAsyncThunk(
         {dispatch, rejectWithValue}
     ) => {
         try {
-            await api.delete(`/groups/${groupId}/remove-user/${userId}`);
+            await api.post(`/groups/${groupId}/remove-user/${userId}`);
             dispatch(fetchGroups());
         } catch (error) {
             return rejectWithValue(handleGroupsError(error, 'Impossibile rimuovere il membro'));
@@ -183,15 +182,18 @@ export const removeMember = createAsyncThunk(
     }
 );
 
-// 🔹 Invia una richiesta di ingresso (ex requestJoinGroup)
+// 🔹 Invia una richiesta di ingresso
 export const requestJoinGroup = createAsyncThunk(
     'groups/requestJoinGroup',
-    async (tag: string, {dispatch, rejectWithValue}) => {
+    async ({ groupId, password }: { groupId: string; password?: string }, { rejectWithValue }) => {
         try {
-            await api.post(`/groups/join/${tag}`);
-            dispatch(fetchGroups());
-        } catch (error) {
-            return rejectWithValue(handleGroupsError(error, 'Impossibile richiedere di entrare nel gruppo'));
+            const response = await api.post(`/groups/join-by-id/${groupId}`, 
+                password ? { password } : {});
+            return response;
+        } catch (error: any) {
+            return rejectWithValue(
+                error.response?.data?.message || 'Failed to request join group'
+            );
         }
     }
 );
@@ -257,7 +259,6 @@ export const fetchJoinRequests = createAsyncThunk(
     async (groupId: string, {rejectWithValue}) => {
         try {
             return await api.get(`/groups/${groupId}/join-requests`);
-
         } catch (error) {
             return rejectWithValue(handleGroupsError(error, 'Impossibile recuperare le richieste di ingresso'));
         }
