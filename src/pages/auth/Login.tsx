@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { TextField, Button, Container, Typography, Card, CardContent } from '@mui/material';
 import { useAppDispatch, useAppSelector } from '../../hooks';
-import { loginUser, clearError } from '../../store/auth/authSlice';
+import { loginUser, clearError } from '../../store/slices/authSlice';
 
 export const Login = () => {
   const dispatch = useAppDispatch();

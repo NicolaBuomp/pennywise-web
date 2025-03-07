@@ -1,50 +1,25 @@
-import { useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material';
-import { theme } from './theme';
-import { Login } from './pages/auth/Login';
-import { supabase } from './lib/supabase';
-import { useAppDispatch } from './hooks';
-import { setUser } from './store/auth/authSlice';
+import { ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
+import { lightTheme, darkTheme } from './theme/theme';
+import { Container } from '@mui/material';
+import AppRoutes from './routes';
+import { useSelector } from 'react-redux';
+import { selectIsDarkMode } from './store/slices/themeSlice';
+import ThemeSwitcher from './components/layout/themeSwitcher';
 
 function App() {
-  const dispatch = useAppDispatch();
+  const isDarkMode = useSelector(selectIsDarkMode);
   
-  useEffect(() => {
-    // Check for session on app load
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        dispatch(setUser(session.user));
-      }
-    };
-    
-    checkSession();
-    
-    // Set up auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === 'SIGNED_IN' && session) {
-          dispatch(setUser(session.user));
-        } else if (event === 'SIGNED_OUT') {
-          dispatch(setUser(null));
-        }
-      }
-    );
-    
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [dispatch]);
-
   return (
-    <ThemeProvider theme={theme}>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Login />} />
-          {/* Altre rotte future */}
-        </Routes>
-      </BrowserRouter>
+    <ThemeProvider theme={isDarkMode ? darkTheme : lightTheme}>
+      {/* CssBaseline per normalizzare gli stili di default */}
+      <CssBaseline />
+      <Container>
+        {/* Switch per il cambio tema */}
+        <ThemeSwitcher />
+        {/* Renderizza le rotte dell'app */}
+        <AppRoutes />
+      </Container>
     </ThemeProvider>
   );
 }
