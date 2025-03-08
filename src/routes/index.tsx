@@ -1,7 +1,8 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import ProtectedRoute from '../components/routes/ProtectedRoute';
-import PublicRoute from '../components/routes/PublicRoute';
 import { Login } from '../pages/auth/Login';
+import { Register } from '../pages/auth/Register';
+import PublicRoute from './PublicRoute';
+import ProtectedRoute from './ProtectedRoute';
 
 // Importare le pagine dell'applicazione
 // ... altre importazioni di pagine
@@ -17,11 +18,10 @@ const AppRoutes = () => {
           {/* Rotte pubbliche ristrette (non accessibili se autenticati) */}
           <Route element={<PublicRoute restricted />}>
             <Route path="/login" element={<Login />} />
-            {/* <Route path="/register" element={<Register />} /> */}
+            <Route path="/register" element={<Register />} />
           </Route>
         </Route>
         
-        {/* Rotte protette (richiedono autenticazione) */}
         <Route element={<ProtectedRoute />}>
           {/* <Route path="/dashboard" element={<Dashboard />} /> */}
           {/* Altre rotte protette */}

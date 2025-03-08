@@ -1,6 +1,6 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { selectIsAuthenticated } from '../../store/slices/authSlice';
+import { selectIsAuthenticated } from '../store/slices/authSlice';
 
 interface PublicRouteProps {
   restricted?: boolean;
