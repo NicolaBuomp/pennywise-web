@@ -1,16 +1,36 @@
 import { Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { selectIsAuthenticated } from '../store/slices/authSlice';
+import { selectIsAuthenticated, selectLoading } from '../store/slices/authSlice';
+import { Box, CircularProgress, Typography } from '@mui/material';
 
 const ProtectedRoute = () => {
   const isAuthenticated = useSelector(selectIsAuthenticated);
+  const loading = useSelector(selectLoading);
   
-  // Reindirizza l'utente alla pagina di login se non è autenticato
+  // Show a loading indicator while checking authentication status
+  if (loading) {
+    return (
+      <Box sx={{ 
+        display: 'flex', 
+        justifyContent: 'center', 
+        alignItems: 'center', 
+        flexDirection: 'column',
+        height: '100vh' 
+      }}>
+        <CircularProgress />
+        <Typography variant="body1" sx={{ mt: 2 }}>
+          Loading...
+        </Typography>
+      </Box>
+    );
+  }
+  
+  // Redirect user to login if not authenticated
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // Se l'utente è autenticato, renderizza il contenuto della rotta
+  // If user is authenticated, render the protected content
   return <Outlet />;
 };
 

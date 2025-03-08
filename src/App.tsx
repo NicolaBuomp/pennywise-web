@@ -1,25 +1,30 @@
 import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { lightTheme, darkTheme } from './theme/theme';
-import { Container } from '@mui/material';
-import AppRoutes from './routes';
 import { useSelector } from 'react-redux';
 import { selectIsDarkMode } from './store/slices/themeSlice';
-import ThemeSwitcher from './components/layout/themeSwitcher';
+import AppRoutes from './routes';
+import AppLayout from './components/layout/AppLayout';
+import { useEffect } from 'react';
+import { useAppDispatch } from './hooks';
+import { checkSession } from './store/slices/authSlice';
 
 function App() {
   const isDarkMode = useSelector(selectIsDarkMode);
+  const dispatch = useAppDispatch();
+  
+  // Check for existing session on app load
+  useEffect(() => {
+    dispatch(checkSession());
+  }, [dispatch]);
   
   return (
     <ThemeProvider theme={isDarkMode ? darkTheme : lightTheme}>
-      {/* CssBaseline per normalizzare gli stili di default */}
+      {/* CssBaseline normalizes styles */}
       <CssBaseline />
-      <Container>
-        {/* Switch per il cambio tema */}
-        <ThemeSwitcher />
-        {/* Renderizza le rotte dell'app */}
+      <AppLayout>
         <AppRoutes />
-      </Container>
+      </AppLayout>
     </ThemeProvider>
   );
 }
