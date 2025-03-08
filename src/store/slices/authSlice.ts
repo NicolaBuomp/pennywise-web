@@ -1,9 +1,10 @@
+// src/store/slices/authSlice.ts
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { supabase } from '../../services/supabase';
 import { User, Session } from '@supabase/supabase-js';
 import { RootState } from '../index';
 
-// Types
+// Definizione dei tipi
 interface AuthState {
   isAuthenticated: boolean;
   user: User | null;
@@ -26,7 +27,7 @@ interface RegisterCredentials {
   lastName: string;
 }
 
-// Initial state
+// Stato iniziale
 const initialState: AuthState = {
   isAuthenticated: false,
   user: null,
@@ -37,7 +38,7 @@ const initialState: AuthState = {
   emailVerificationSent: false,
 };
 
-// Check for existing session
+// Thunk per verificare la sessione esistente
 export const checkSession = createAsyncThunk(
   'auth/checkSession',
   async (_, { rejectWithValue }) => {
@@ -51,7 +52,7 @@ export const checkSession = createAsyncThunk(
   }
 );
 
-// Login thunk
+// Thunk per il login
 export const loginUser = createAsyncThunk(
   'auth/loginUser',
   async ({ email, password }: LoginCredentials, { rejectWithValue }) => {
@@ -59,9 +60,8 @@ export const loginUser = createAsyncThunk(
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       
       if (error) {
-        // Handle specific Supabase error codes
+        // Gestione specifica per errore di email non verificata
         if (error.message.includes('Email not confirmed')) {
-          // This is thrown when the email hasn't been verified yet
           return rejectWithValue('Please check your email for the verification link before logging in.');
         }
         throw error;
@@ -74,7 +74,7 @@ export const loginUser = createAsyncThunk(
   }
 );
 
-// Register thunk
+// Thunk per la registrazione
 export const registerUser = createAsyncThunk(
   'auth/registerUser',
   async ({ email, password, firstName, lastName }: RegisterCredentials, { rejectWithValue }) => {
@@ -92,8 +92,7 @@ export const registerUser = createAsyncThunk(
       
       if (error) throw error;
       
-      // Check if email confirmation is required (it usually is)
-      // If data.session is null but data.user exists, it means email confirmation is required
+      // Verifica se è richiesta la conferma email
       const emailConfirmationRequired = data.user && !data.session;
       
       return {
@@ -106,7 +105,7 @@ export const registerUser = createAsyncThunk(
   }
 );
 
-// Logout thunk
+// Thunk per il logout
 export const logoutUser = createAsyncThunk(
   'auth/logoutUser',
   async (_, { rejectWithValue }) => {
@@ -120,7 +119,7 @@ export const logoutUser = createAsyncThunk(
   }
 );
 
-// Auth slice
+// Slice di autenticazione
 const authSlice = createSlice({
   name: "auth",
   initialState,
@@ -137,7 +136,7 @@ const authSlice = createSlice({
   },
   extraReducers: (builder) => {
     builder
-      // Check session
+      // Gestione del controllo sessione
       .addCase(checkSession.pending, (state) => {
         state.loading = true;
       })
@@ -156,7 +155,7 @@ const authSlice = createSlice({
         state.user = null;
       })
       
-      // Login cases
+      // Gestione del login
       .addCase(loginUser.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -173,7 +172,7 @@ const authSlice = createSlice({
         state.error = action.payload as string;
       })
       
-      // Register cases
+      // Gestione della registrazione
       .addCase(registerUser.pending, (state) => {
         state.loading = true;
         state.error = null;
@@ -183,13 +182,13 @@ const authSlice = createSlice({
       .addCase(registerUser.fulfilled, (state, action) => {
         state.loading = false;
         
-        // If email confirmation is required
+        // Se è richiesta la conferma email
         if (action.payload.emailConfirmationRequired) {
           state.emailVerificationSent = true;
           state.registrationSuccess = true;
-          // Don't authenticate yet - user needs to verify email
+          // Non autenticare ancora - l'utente deve verificare l'email
         } 
-        // If immediate login is allowed (rare with Supabase defaults)
+        // Se è consentito l'accesso immediato (raro con le impostazioni predefinite di Supabase)
         else if (action.payload.session) {
           state.isAuthenticated = true;
           state.session = action.payload.session;
@@ -202,7 +201,7 @@ const authSlice = createSlice({
         state.error = action.payload as string;
       })
       
-      // Logout case
+      // Gestione del logout
       .addCase(logoutUser.fulfilled, (state) => {
         state.isAuthenticated = false;
         state.user = null;
@@ -211,10 +210,10 @@ const authSlice = createSlice({
   },
 });
 
-// Export actions
+// Esportazione delle azioni
 export const { clearError, resetRegistrationSuccess, resetEmailVerificationSent } = authSlice.actions;
 
-// Selectors
+// Selettori
 export const selectIsAuthenticated = (state: RootState) => state.auth.isAuthenticated;
 export const selectUser = (state: RootState) => state.auth.user;
 export const selectSession = (state: RootState) => state.auth.session;

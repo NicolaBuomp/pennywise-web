@@ -1,3 +1,4 @@
+// src/pages/protected/Dashboard.tsx
 import { Box, Typography, Container, Paper, Grid, Button } from '@mui/material';
 import { useSelector } from 'react-redux';
 import { selectUser } from '../../store/slices/authSlice';
@@ -63,7 +64,7 @@ const Dashboard = () => {
             Quick Statistics
           </Typography>
           <Grid container spacing={3}>
-            {/* These would be replaced with actual data components */}
+            {/* Questi verrebbero sostituiti con componenti di dati effettivi */}
             <Grid item xs={12} md={4}>
               <Paper 
                 elevation={2} 

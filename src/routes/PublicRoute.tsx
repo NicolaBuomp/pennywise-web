@@ -1,3 +1,4 @@
+// src/routes/PublicRoute.tsx
 import { Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { selectIsAuthenticated, selectLoading } from '../store/slices/authSlice';
@@ -11,7 +12,7 @@ const PublicRoute = ({ restricted = false }: PublicRouteProps) => {
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const loading = useSelector(selectLoading);
   
-  // Show a loading indicator while checking authentication status
+  // Mostra un indicatore di caricamento durante il controllo dello stato di autenticazione
   if (loading) {
     return (
       <Box sx={{ 
@@ -29,13 +30,13 @@ const PublicRoute = ({ restricted = false }: PublicRouteProps) => {
     );
   }
   
-  // If the route is restricted and the user is authenticated,
-  // redirect to the dashboard
+  // Se la rotta è limitata e l'utente è autenticato,
+  // reindirizza alla dashboard
   if (isAuthenticated && restricted) {
     return <Navigate to="/dashboard" replace />;
   }
 
-  // If the route is public, allow access
+  // Se la rotta è pubblica, consenti l'accesso
   return <Outlet />;
 };
 

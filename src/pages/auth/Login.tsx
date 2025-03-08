@@ -1,3 +1,4 @@
+// src/pages/auth/Login.tsx
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
@@ -17,7 +18,7 @@ import { loginUser, clearError, selectError, selectLoading } from '../../store/s
 import { z } from 'zod';
 import { supabase } from '../../services/supabase';
 
-// Define schema for login validation
+// Schema di validazione per il login
 const loginSchema = z.object({
   email: z.string().email({ message: 'Please enter a valid email address' }),
   password: z.string().min(1, { message: 'Password is required' }),
@@ -42,19 +43,19 @@ export const Login = () => {
   const [notificationMessage, setNotificationMessage] = useState<{text: string, type: 'success' | 'info' | 'warning' | 'error'} | null>(null);
   const [resendingVerification, setResendingVerification] = useState(false);
 
-  // Show notification message if redirected with state
+  // Mostra il messaggio di notifica se reindirizzato con state
   useEffect(() => {
     if (state?.message) {
       setNotificationMessage({
         text: state.message,
         type: 'info'
       });
-      // Clean up location state
+      // Pulisce lo state della location
       navigate(location.pathname, { replace: true });
     }
   }, [state, navigate, location.pathname]);
 
-  // Clear any errors when component unmounts
+  // Pulisce gli errori quando il componente viene smontato
   useEffect(() => {
     return () => {
       dispatch(clearError());
@@ -84,12 +85,12 @@ export const Login = () => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     
-    // Clear related error if user starts typing
+    // Pulisce l'errore relativo quando l'utente inizia a digitare
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: '' }));
     }
     
-    // Clear API error when the user starts typing
+    // Pulisce l'errore API quando l'utente inizia a digitare
     if (error) {
       dispatch(clearError());
     }
@@ -98,7 +99,7 @@ export const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Clear any previous errors
+    // Pulisce eventuali errori precedenti
     dispatch(clearError());
     
     if (validateForm()) {
@@ -107,9 +108,9 @@ export const Login = () => {
           email: formData.email, 
           password: formData.password 
         })).unwrap();
-        // On successful login, user will be redirected automatically by the ProtectedRoute
+        // In caso di login riuscito, l'utente verrà reindirizzato automaticamente da ProtectedRoute
       } catch (err) {
-        // Check if error is about email not confirmed
+        // Verifica se l'errore riguarda l'email non confermata
         if (typeof err === 'string' && err.includes('verify')) {
           setNotificationMessage({
             text: "Your email hasn't been verified yet. Please check your inbox for the verification link.",
@@ -253,7 +254,7 @@ export const Login = () => {
                   component="button"
                   variant="body2"
                   onClick={() => {
-                    // TODO: Implement forgot password functionality
+                    // TODO: Implementare la funzionalità di recupero password
                     alert('Forgot password functionality will be implemented soon!');
                   }}
                   sx={{ textDecoration: 'none', cursor: 'pointer' }}

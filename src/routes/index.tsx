@@ -1,3 +1,4 @@
+// src/routes/index.tsx
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Login } from '../pages/auth/Login';
 import { Register } from '../pages/auth/Register';
@@ -11,7 +12,7 @@ import Dashboard from '../pages/protected/Dasboard';
 const AppRoutes = () => {
   const dispatch = useAppDispatch();
 
-  // Check for existing session on app load
+  // Controlla la sessione esistente al caricamento dell'app
   useEffect(() => {
     dispatch(checkSession());
   }, [dispatch]);
@@ -19,29 +20,29 @@ const AppRoutes = () => {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Redirect root to dashboard or login based on auth status */}
+        {/* Reindirizza la root alla dashboard o al login in base allo stato di autenticazione */}
         <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
-        {/* Public routes that redirect to dashboard if authenticated */}
+        {/* Rotte pubbliche che reindirizzano alla dashboard se autenticati */}
         <Route element={<PublicRoute restricted />}>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
         </Route>
         
-        {/* Protected routes that require authentication */}
+        {/* Rotte protette che richiedono autenticazione */}
         <Route element={<ProtectedRoute />}>
           <Route path="/dashboard" element={<Dashboard />} />
-          {/* Add more protected routes here as needed */}
+          {/* Aggiungi altre rotte protette qui se necessario */}
         </Route>
         
-        {/* 404 route - catch all non-matching routes */}
+        {/* Rotta 404 - cattura tutte le rotte non corrispondenti */}
         <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>
   );
 };
 
-// Simple 404 component
+// Componente 404 semplice
 const NotFound = () => {
   return (
     <div style={{ 

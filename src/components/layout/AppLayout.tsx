@@ -1,12 +1,12 @@
+// src/components/layout/AppLayout.tsx
 import React from 'react';
 import { Box, AppBar, Toolbar, Typography, IconButton, Container, useTheme, Drawer, List, ListItem, ListItemText, ListItemButton, ListItemIcon, Divider } from '@mui/material';
 import { useSelector } from 'react-redux';
 import { selectUser } from '../../store/slices/authSlice';
 import ThemeSwitcher from './themeSwitcher';
-import { Link, useLocation, Location } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 
-// You can add Material-UI icons or other icons here
-// We're just using emoji for simplicity
+// Elementi del menu principale
 const MENU_ITEMS = [
   { name: 'Dashboard', path: '/dashboard', icon: '📊' },
   { name: 'Transactions', path: '/transactions', icon: '💸' },
@@ -21,20 +21,20 @@ interface AppLayoutProps {
 
 const DRAWER_WIDTH = 240;
 
-// Safe Link component that doesn't rely on Router context
+// Componente Link sicuro che non dipende dal contesto Router
 const SafeLink = ({ to, children, ...props }: { to: string; children: React.ReactNode; [key: string]: any }) => {
   try {
-    // Try to use the actual Link component
-    // This will throw if outside a Router context
+    // Prova a usare il componente Link
+    // Genererà un errore se fuori dal contesto Router
     useLocation();
     return <Link to={to} {...props}>{children}</Link>;
   } catch (error) {
-    // Fall back to a regular anchor tag
+    // Fallback a un normale tag anchor
     return <a href={to} {...props}>{children}</a>;
   }
 };
 
-// Safe wrapper to check if we're in a router context
+// Wrapper sicuro per verificare se siamo in un contesto router
 const isInRouterContext = (): boolean => {
   try {
     useLocation();
@@ -44,42 +44,42 @@ const isInRouterContext = (): boolean => {
   }
 };
 
-// Component to safely render router-dependent content
+// Componente per renderizzare in sicurezza contenuti dipendenti dal router
 const SafeRouter = ({ children }: { children: React.ReactNode }) => {
   const hasRouterContext = isInRouterContext();
   
-  // For components that need location but are rendered outside Router context
+  // Per componenti che necessitano di location ma sono renderizzati fuori dal contesto Router
   if (!hasRouterContext) {
-    return <Box>{children}</Box>; // Render without Router-dependent features
+    return <Box>{children}</Box>; // Renderizza senza funzionalità dipendenti dal Router
   }
   
-  return <>{children}</>; // Render normally inside Router context
+  return <>{children}</>; // Renderizza normalmente all'interno del contesto Router
 };
 
 const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
   const theme = useTheme();
   const user = useSelector(selectUser);
   
-  // Get current path, with a safe default
+  // Ottiene il percorso corrente, con un valore predefinito
   let currentPath = '/';
   try {
     const location = useLocation();
     currentPath = location.pathname;
   } catch (error) {
-    // If useLocation fails, we use the default path
+    // Se useLocation fallisce, usiamo il percorso predefinito
   }
   
-  // We would normally manage these with state, but keeping it simple for this example
+  // L'utente è autenticato se esiste l'oggetto user
   const isAuthenticated = !!user;
   
-  // Only show drawer for authenticated routes
+  // Mostra il drawer solo per le rotte autenticate
   const showDrawer = isAuthenticated && 
     currentPath !== '/login' && 
     currentPath !== '/register';
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      {/* AppBar - always visible */}
+      {/* AppBar - sempre visibile */}
       <AppBar 
         position="fixed" 
         sx={{ 
@@ -130,7 +130,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </Toolbar>
       </AppBar>
       
-      {/* Side drawer - only for authenticated routes */}
+      {/* Drawer laterale - solo per le rotte autenticate */}
       {showDrawer && (
         <Drawer
           variant="permanent"
@@ -145,7 +145,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             },
           }}
         >
-          <Toolbar /> {/* This creates space for the AppBar */}
+          <Toolbar /> {/* Crea spazio per l'AppBar */}
           <Box sx={{ overflow: 'auto', mt: 2 }}>
             <List>
               {MENU_ITEMS.map((item) => (
@@ -186,7 +186,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
         </Drawer>
       )}
       
-      {/* Main content */}
+      {/* Contenuto principale */}
       <Box 
         component="main" 
         sx={{ 
@@ -196,7 +196,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
           ml: { sm: showDrawer ? `${DRAWER_WIDTH}px` : 0 },
         }}
       >
-        <Toolbar /> {/* This creates space for the AppBar */}
+        <Toolbar /> {/* Crea spazio per l'AppBar */}
         <Container maxWidth="lg" sx={{ pt: 2 }}>
           <SafeRouter>
             {children}

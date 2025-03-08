@@ -1,3 +1,4 @@
+// src/pages/auth/Register.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { z } from 'zod';
@@ -29,7 +30,7 @@ import {
   resetEmailVerificationSent
 } from '../../store/slices/authSlice';
 
-// Define schema for registration validation
+// Schema di validazione per la registrazione
 const registerSchema = z.object({
   firstName: z.string().min(2, { message: "First name must be at least 2 characters" }),
   lastName: z.string().min(2, { message: "Last name must be at least 2 characters" }),
@@ -66,14 +67,14 @@ export const Register = () => {
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
   const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
 
-  // Show verification dialog when registration succeeds and email verification is required
+  // Mostra finestra di dialogo di verifica quando la registrazione ha successo e la verifica via email è richiesta
   useEffect(() => {
     if (registrationSuccess && emailVerificationSent) {
       setVerificationDialogOpen(true);
     }
   }, [registrationSuccess, emailVerificationSent]);
 
-  // Clean up on unmount
+  // Pulizia allo smontaggio
   useEffect(() => {
     return () => {
       dispatch(clearError());
@@ -86,12 +87,12 @@ export const Register = () => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
     
-    // Clear related error when user types
+    // Pulisce l'errore relativo quando l'utente digita
     if (formErrors[name]) {
       setFormErrors(prev => ({ ...prev, [name]: '' }));
     }
     
-    // Clear API error when the user starts typing
+    // Pulisce l'errore API quando l'utente inizia a digitare
     if (error) {
       dispatch(clearError());
     }
@@ -119,7 +120,7 @@ export const Register = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Clear any previous errors
+    // Pulisce eventuali errori precedenti
     dispatch(clearError());
     
     if (validateForm()) {
@@ -130,9 +131,9 @@ export const Register = () => {
           firstName: formData.firstName,
           lastName: formData.lastName
         })).unwrap();
-        // Success handling is in the useEffect that shows the dialog
+        // La gestione del successo avviene nell'useEffect che mostra la finestra di dialogo
       } catch (err) {
-        // Error is handled by the Redux state
+        // L'errore è gestito dallo stato Redux
       }
     }
   };
@@ -151,9 +152,9 @@ export const Register = () => {
   return (
     <>
       <Container component="main" maxWidth="lg" sx={{ height: '100vh', display: 'flex', py: 4 }}>
-        {/* Main container */}
+        {/* Contenitore principale */}
         <Box sx={{ display: 'flex', width: '100%', flexDirection: { xs: 'column', md: 'row' } }}>
-          {/* Left side - Form */}
+          {/* Lato sinistro - Form */}
           <Box
             sx={{ 
               flex: 1,
@@ -185,7 +186,7 @@ export const Register = () => {
               )}
               
               <Box component="form" onSubmit={handleSubmit} noValidate>
-                {/* Name fields in row using Stack */}
+                {/* Campi nome in riga con Stack */}
                 <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 1 }}>
                   <Box sx={{ flex: 1 }}>
                     <TextField
@@ -300,7 +301,7 @@ export const Register = () => {
             </Paper>
           </Box>
           
-          {/* Right side - Branding/Image */}
+          {/* Lato destro - Branding/Immagine */}
           <Box
             sx={{ 
               flex: 1,
@@ -345,7 +346,7 @@ export const Register = () => {
         </Box>
       </Container>
 
-      {/* Email Verification Dialog */}
+      {/* Finestra di dialogo per la verifica email */}
       <Dialog
         open={verificationDialogOpen}
         onClose={handleVerificationDialogClose}

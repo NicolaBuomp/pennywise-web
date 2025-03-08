@@ -1,3 +1,4 @@
+// src/routes/ProtectedRoute.tsx
 import { Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import { selectIsAuthenticated, selectLoading } from '../store/slices/authSlice';
@@ -7,7 +8,7 @@ const ProtectedRoute = () => {
   const isAuthenticated = useSelector(selectIsAuthenticated);
   const loading = useSelector(selectLoading);
   
-  // Show a loading indicator while checking authentication status
+  // Mostra un indicatore di caricamento durante il controllo dello stato di autenticazione
   if (loading) {
     return (
       <Box sx={{ 
@@ -25,12 +26,12 @@ const ProtectedRoute = () => {
     );
   }
   
-  // Redirect user to login if not authenticated
+  // Reindirizza l'utente al login se non è autenticato
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
   }
 
-  // If user is authenticated, render the protected content
+  // Se l'utente è autenticato, visualizza il contenuto protetto
   return <Outlet />;
 };
 
