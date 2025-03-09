@@ -15,9 +15,11 @@ import {
   updateProfileStart,
   updateProfileSuccess,
   updateProfileFailure,
+  setEmailVerified,
   User
 } from '../slices/authSlice';
 import authService, { UserData } from '../../services/authService';
+import { addAlert } from '../slices/uiSlice';
 
 /**
  * Thunk per il login utente con email e password
@@ -27,7 +29,20 @@ export const login = (email: string, password: string) => async (dispatch: AppDi
   try {
     const data = await authService.login(email, password);
     const userData = await authService.getCurrentUser();
-    dispatch(loginSuccess(userData as User));
+    
+    if (!data.isEmailVerified) {
+      dispatch(addAlert({
+        type: 'warning',
+        message: 'Verifica la tua email per accedere a tutte le funzionalità. Ti abbiamo inviato un nuovo link di verifica.',
+        autoHideDuration: 10000,
+      }));
+    }
+    
+    dispatch(loginSuccess({
+      user: userData as User,
+      isEmailVerified: data.isEmailVerified
+    }));
+    
     return userData;
   } catch (error) {
     dispatch(loginFailure((error as Error).message));
@@ -59,11 +74,61 @@ export const register = (email: string, password: string, userData: UserData) =>
   try {
     const data = await authService.register(email, password, userData);
     const userProfile = await authService.getCurrentUser();
-    dispatch(registerSuccess(userProfile as User));
+    
+    if (!data.isEmailVerified) {
+      dispatch(addAlert({
+        type: 'info',
+        message: 'Ti abbiamo inviato un\'email di verifica. Per favore controlla la tua casella di posta e conferma il tuo indirizzo email.',
+        autoHideDuration: 10000,
+      }));
+    }
+    
+    dispatch(registerSuccess({
+      user: userProfile as User,
+      isEmailVerified: data.isEmailVerified
+    }));
+    
     return userProfile;
   } catch (error) {
     dispatch(registerFailure((error as Error).message));
     throw error;
+  }
+};
+
+/**
+ * Thunk per verificare lo stato di verifica dell'email
+ */
+export const checkEmailVerification = () => async (dispatch: AppDispatch) => {
+  try {
+    const isVerified = await authService.checkEmailVerification();
+    dispatch(setEmailVerified(isVerified));
+    return isVerified;
+  } catch (error) {
+    // Non gestiamo l'errore qui, semplicemente restituiamo false
+    dispatch(setEmailVerified(false));
+    return false;
+  }
+};
+
+/**
+ * Thunk per inviare una nuova email di verifica
+ */
+export const sendEmailVerification = () => async (dispatch: AppDispatch) => {
+  try {
+    await authService.sendEmailVerification();
+    dispatch(addAlert({
+      type: 'success',
+      message: 'Email di verifica inviata. Controlla la tua casella di posta.',
+      autoHideDuration: 6000,
+    }));
+    return true;
+  } catch (error) {
+    dispatch(addAlert({
+      type: 'error',
+      message: `Impossibile inviare l'email di verifica: ${(error as Error).message}`,
+      autoHideDuration: 6000,
+    }));
+    return false;
   }
 };
 
@@ -91,6 +156,9 @@ export const checkAuthState = () => async (dispatch: AppDispatch) => {
     if (session) {
       const userData = await authService.getCurrentUser();
       dispatch(checkAuthSuccess(userData));
+      
+      // Dopo aver verificato l'autenticazione, controlla lo stato dell'email
+      dispatch(checkEmailVerification());
     } else {
       dispatch(checkAuthFailure());
     }

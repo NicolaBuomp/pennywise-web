@@ -11,17 +11,25 @@ import baseTheme from './theme';
 
 // Layouts
 import AuthLayout from './layouts/AuthLayout';
-// Il DashboardLayout verrà implementato successivamente
+import DashboardLayout from './layouts/DashboardLayout';
 
 // Auth Pages
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
-// Altre pagine verranno implementate successivamente
+import ConfirmEmail from './pages/auth/ConfirmEmail';
+// import ForgotPassword from './pages/auth/ForgotPassword';
+// import ResetPassword from './pages/auth/ResetPassword';
+
+// Dashboard Pages
+// import Profile from './pages/dashboard/Profile';
+// import Settings from './pages/dashboard/Settings';
 
 // Redux
 import { AppDispatch, RootState } from './redux/store';
 import { checkAuthState } from './redux/thunks/authThunks';
 import LoadingScreen from './components/common/LoadingScreen';
+import AlertManager from './components/common/AlertManager';
+import { Dashboard } from '@mui/icons-material';
 
 const App: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -54,23 +62,27 @@ const App: React.FC = () => {
       <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="it">
         <CssBaseline />
         <Router>
+          {/* Sistema di gestione degli alert globali */}
+          <AlertManager />
+          
           <Routes>
             {/* Auth Routes */}
             <Route element={<AuthLayout />}>
               <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <Login />} />
               <Route path="/register" element={isAuthenticated ? <Navigate to="/" /> : <Register />} />
-              {/* Altre route di autenticazione verranno aggiunte successivamente */}
+              <Route path="/auth/confirm-email" element={<ConfirmEmail />} />
+              {/* <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} /> */}
             </Route>
 
-            {/* Protected Routes - verranno implementate in seguito */}
-            <Route 
-              path="/"
-              element={
-                isAuthenticated ? 
-                <div>Dashboard (verrà implementata successivamente)</div> : 
-                <Navigate to="/login" />
-              } 
-            />
+            {/* Protected Routes */}
+            <Route element={isAuthenticated ? <DashboardLayout /> : <Navigate to="/login" />}>
+              <Route path="/" element={<Dashboard />} />
+              {/* <Route path="/profile" element={<Profile />} />
+              <Route path="/settings" element={<Settings />} /> */}
+              
+              {/* Altre rotte protette verranno aggiunte qui */}
+            </Route>
 
             {/* Catch-all route */}
             <Route path="*" element={<Navigate to="/" />} />

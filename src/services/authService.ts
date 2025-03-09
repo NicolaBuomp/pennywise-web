@@ -17,7 +17,7 @@ export const authService = {
    * Effettua il login con email e password
    * @param email - Email dell'utente
    * @param password - Password dell'utente
-   * @returns Dati dell'utente autenticato
+   * @returns Dati dell'utente autenticato e stato di verifica email
    */
   login: async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -26,7 +26,28 @@ export const authService = {
     });
 
     if (error) throw error;
-    return data;
+    
+    // Verifica lo stato di verifica dell'email
+    const isEmailVerified = data.user?.email_confirmed_at !== null;
+    
+    // Se l'email non è verificata, invia un promemoria per verificarla
+    if (!isEmailVerified) {
+      await authService.sendEmailVerification();
+    }
+    
+    return { ...data, isEmailVerified };
+  },
+
+  /**
+   * Invia un'email di verifica all'utente corrente
+   */
+  sendEmailVerification: async () => {
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email: (await supabase.auth.getUser()).data.user?.email,
+    });
+
+    if (error) throw error;
   },
 
   /**
@@ -64,11 +85,26 @@ export const authService = {
           default_currency: userData.defaultCurrency || 'EUR',
           language: userData.language || 'it',
         },
+        emailRedirectTo: `${window.location.origin}/auth/confirm-email`,
       },
     });
 
     if (error) throw error;
-    return data;
+    
+    // La maggior parte dei provider Supabase richiede verifica email
+    // meta.data?.email_confirmed_at sarà null se la verifica è necessaria
+    const isEmailVerified = data.user?.email_confirmed_at !== null;
+    
+    return { ...data, isEmailVerified };
+  },
+
+  /**
+   * Verifica lo stato di conferma dell'email dell'utente corrente
+   * @returns Stato di verifica dell'email
+   */
+  checkEmailVerification: async () => {
+    const { data: userData } = await supabase.auth.getUser();
+    return userData.user?.email_confirmed_at !== null;
   },
 
   /**

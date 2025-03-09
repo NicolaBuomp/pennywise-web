@@ -15,6 +15,7 @@ export interface User {
 interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
+  isEmailVerified: boolean;
   isLoading: boolean;
   error: string | null;
 }
@@ -22,6 +23,7 @@ interface AuthState {
 const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
+  isEmailVerified: false,
   isLoading: true,
   error: null,
 };
@@ -35,16 +37,18 @@ export const authSlice = createSlice({
       state.isLoading = true;
       state.error = null;
     },
-    loginSuccess: (state, action: PayloadAction<User>) => {
+    loginSuccess: (state, action: PayloadAction<{user: User, isEmailVerified: boolean}>) => {
       state.isLoading = false;
       state.isAuthenticated = true;
-      state.user = action.payload;
+      state.user = action.payload.user;
+      state.isEmailVerified = action.payload.isEmailVerified;
       state.error = null;
     },
     loginFailure: (state, action: PayloadAction<string>) => {
       state.isLoading = false;
       state.isAuthenticated = false;
       state.user = null;
+      state.isEmailVerified = false;
       state.error = action.payload;
     },
     
@@ -53,15 +57,21 @@ export const authSlice = createSlice({
       state.isLoading = true;
       state.error = null;
     },
-    registerSuccess: (state, action: PayloadAction<User>) => {
+    registerSuccess: (state, action: PayloadAction<{user: User, isEmailVerified: boolean}>) => {
       state.isLoading = false;
       state.isAuthenticated = true;
-      state.user = action.payload;
+      state.user = action.payload.user;
+      state.isEmailVerified = action.payload.isEmailVerified;
       state.error = null;
     },
     registerFailure: (state, action: PayloadAction<string>) => {
       state.isLoading = false;
       state.error = action.payload;
+    },
+    
+    // Aggiornamento dello stato di verifica dell'email
+    setEmailVerified: (state, action: PayloadAction<boolean>) => {
+      state.isEmailVerified = action.payload;
     },
     
     // Gestione del logout
@@ -72,6 +82,7 @@ export const authSlice = createSlice({
       state.isLoading = false;
       state.isAuthenticated = false;
       state.user = null;
+      state.isEmailVerified = false;
       state.error = null;
     },
     logoutFailure: (state, action: PayloadAction<string>) => {
@@ -87,11 +98,15 @@ export const authSlice = createSlice({
       state.isLoading = false;
       state.isAuthenticated = !!action.payload;
       state.user = action.payload;
+      // Se l'utente è loggato, assumiamo che l'email sia verificata
+      // Questo può essere sovrascritto successivamente
+      state.isEmailVerified = !!action.payload;
     },
     checkAuthFailure: (state) => {
       state.isLoading = false;
       state.isAuthenticated = false;
       state.user = null;
+      state.isEmailVerified = false;
     },
     
     // Aggiornamento del profilo utente
@@ -128,6 +143,7 @@ export const {
   registerStart,
   registerSuccess,
   registerFailure,
+  setEmailVerified,
   logoutStart,
   logoutSuccess,
   logoutFailure,
