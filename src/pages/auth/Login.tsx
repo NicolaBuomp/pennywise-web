@@ -1,272 +1,255 @@
-// src/pages/auth/Login.tsx
-import { useState, useEffect } from 'react';
-import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { 
-  TextField, 
-  Button, 
-  Container, 
-  Typography, 
-  Card, 
-  CardContent, 
-  Box, 
-  Alert, 
-  CircularProgress,
-  Link as MuiLink,
+import React, { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Link as RouterLink } from 'react-router-dom';
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Link,
+  Stack,
+  InputAdornment,
+  IconButton,
+  Divider,
+  Paper,
+  Alert,
+  CircularProgress
 } from '@mui/material';
-import { useAppDispatch, useAppSelector } from '../../hooks';
-import { loginUser, clearError, selectError, selectLoading } from '../../store/slices/authSlice';
-import { z } from 'zod';
-import { supabase } from '../../services/supabase';
+import {
+  Visibility,
+  VisibilityOff,
+  Google as GoogleIcon,
+  Apple as AppleIcon
+} from '@mui/icons-material';
 
-// Schema di validazione per il login
-const loginSchema = z.object({
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  password: z.string().min(1, { message: 'Password is required' }),
-});
+import { login, loginWithProvider } from '../../redux/thunks/authThunks';
+import { AppDispatch, RootState } from '../../redux/store';
 
-type LoginForm = z.infer<typeof loginSchema>;
+interface FormData {
+  email: string;
+  password: string;
+}
 
-export const Login = () => {
-  const dispatch = useAppDispatch();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const { state } = location as { state: { message?: string } | null };
+interface FormErrors {
+  email?: string;
+  password?: string;
+}
+
+const Login: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { isLoading, error } = useSelector((state: RootState) => state.auth);
   
-  const loading = useAppSelector(selectLoading);
-  const error = useAppSelector(selectError);
-  
-  const [formData, setFormData] = useState<LoginForm>({
+  const [formData, setFormData] = useState<FormData>({
     email: '',
     password: '',
   });
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [notificationMessage, setNotificationMessage] = useState<{text: string, type: 'success' | 'info' | 'warning' | 'error'} | null>(null);
-  const [resendingVerification, setResendingVerification] = useState(false);
-
-  // Mostra il messaggio di notifica se reindirizzato con state
-  useEffect(() => {
-    if (state?.message) {
-      setNotificationMessage({
-        text: state.message,
-        type: 'info'
-      });
-      // Pulisce lo state della location
-      navigate(location.pathname, { replace: true });
-    }
-  }, [state, navigate, location.pathname]);
-
-  // Pulisce gli errori quando il componente viene smontato
-  useEffect(() => {
-    return () => {
-      dispatch(clearError());
-    };
-  }, [dispatch]);
-
-  const validateForm = () => {
-    try {
-      loginSchema.parse(formData);
-      setFormErrors({});
-      return true;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const newErrors: Record<string, string> = {};
-        error.errors.forEach(err => {
-          if (err.path) {
-            newErrors[err.path[0]] = err.message;
-          }
-        });
-        setFormErrors(newErrors);
-      }
-      return false;
-    }
-  };
-
+  
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
     
-    // Pulisce l'errore relativo quando l'utente inizia a digitare
-    if (formErrors[name]) {
-      setFormErrors(prev => ({ ...prev, [name]: '' }));
-    }
-    
-    // Pulisce l'errore API quando l'utente inizia a digitare
-    if (error) {
-      dispatch(clearError());
+    // Reset errore specifico quando l'utente inizia a digitare
+    if (formErrors[name as keyof FormErrors]) {
+      setFormErrors({
+        ...formErrors,
+        [name]: undefined,
+      });
     }
   };
-
-  const handleLogin = async (e: React.FormEvent) => {
+  
+  const validateForm = (): boolean => {
+    const errors: FormErrors = {};
+    
+    // Validazione email
+    if (!formData.email) {
+      errors.email = 'L\'email è obbligatoria';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      errors.email = 'Email non valida';
+    }
+    
+    // Validazione password
+    if (!formData.password) {
+      errors.password = 'La password è obbligatoria';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+  
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    // Pulisce eventuali errori precedenti
-    dispatch(clearError());
-    
-    if (validateForm()) {
-      try {
-        await dispatch(loginUser({ 
-          email: formData.email, 
-          password: formData.password 
-        })).unwrap();
-        // In caso di login riuscito, l'utente verrà reindirizzato automaticamente da ProtectedRoute
-      } catch (err) {
-        // Verifica se l'errore riguarda l'email non confermata
-        if (typeof err === 'string' && err.includes('verify')) {
-          setNotificationMessage({
-            text: "Your email hasn't been verified yet. Please check your inbox for the verification link.",
-            type: 'warning'
-          });
-        }
-      }
-    }
-  };
-
-  const handleResendVerification = async () => {
-    if (!formData.email) {
-      setFormErrors({
-        email: 'Please enter your email to resend verification'
-      });
+    if (!validateForm()) {
       return;
     }
-
-    setResendingVerification(true);
     
     try {
-      const { error } = await supabase.auth.resend({
-        type: 'signup',
-        email: formData.email,
-      });
-      
-      if (error) throw error;
-      
-      setNotificationMessage({
-        text: 'Verification email has been resent. Please check your inbox.',
-        type: 'success'
-      });
+      await dispatch(login(formData.email, formData.password));
+      // In caso di successo, il reindirizzamento viene gestito in App.tsx
     } catch (error) {
-      setNotificationMessage({
-        text: 'Failed to resend verification email. Please try again later.',
-        type: 'error'
-      });
-    } finally {
-      setResendingVerification(false);
+      // Errore già gestito nel reducer
     }
   };
-
+  
+  const handleGoogleLogin = async () => {
+    try {
+      await dispatch(loginWithProvider('google'));
+    } catch (error) {
+      // Errore già gestito nel reducer
+    }
+  };
+  
+  const handleAppleLogin = async () => {
+    try {
+      await dispatch(loginWithProvider('apple'));
+    } catch (error) {
+      // Errore già gestito nel reducer
+    }
+  };
+  
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+  
   return (
-    <Container maxWidth="sm" sx={{ mt: 10 }}>
-      <Box sx={{ mb: 4, textAlign: 'center' }}>
-        <Typography variant="h4" component="h1" fontWeight="bold" gutterBottom>
-          PennyWise
-        </Typography>
-        <Typography variant="body1" color="text.secondary">
-          Your personal finance management solution
-        </Typography>
-      </Box>
-
-      <Card elevation={3}>
-        <CardContent sx={{ p: 4 }}>
-          <Typography variant="h5" fontWeight="medium" gutterBottom>
-            Sign in to your account
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%',
+        maxWidth: 450,
+      }}
+    >
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          p: 4, 
+          width: '100%',
+          borderRadius: 2
+        }}
+      >
+        <Box sx={{ mb: 3, textAlign: 'center' }}>
+          <Typography component="h1" variant="h4" gutterBottom>
+            Accedi a Pennywise
           </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Gestisci le tue spese condivise in modo semplice
+          </Typography>
+        </Box>
+        
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+        
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            id="email"
+            label="Email"
+            name="email"
+            autoComplete="email"
+            autoFocus
+            value={formData.email}
+            onChange={handleChange}
+            error={!!formErrors.email}
+            helperText={formErrors.email}
+          />
           
-          {notificationMessage && (
-            <Alert severity={notificationMessage.type} sx={{ my: 2 }}>
-              {notificationMessage.text}
-              {notificationMessage.type === 'warning' && (
-                <Box sx={{ mt: 1 }}>
-                  <MuiLink 
-                    component="button"
-                    variant="body2"
-                    onClick={handleResendVerification}
-                    disabled={resendingVerification}
-                    sx={{ textDecoration: 'underline', cursor: 'pointer' }}
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="password"
+            label="Password"
+            type={showPassword ? 'text' : 'password'}
+            id="password"
+            autoComplete="current-password"
+            value={formData.password}
+            onChange={handleChange}
+            error={!!formErrors.password}
+            helperText={formErrors.password}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={togglePasswordVisibility}
+                    edge="end"
                   >
-                    {resendingVerification ? 'Sending...' : 'Resend verification email'}
-                  </MuiLink>
-                </Box>
-              )}
-            </Alert>
-          )}
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
+          />
           
-          {error && !notificationMessage && (
-            <Alert severity="error" sx={{ my: 2 }}>
-              {error}
-            </Alert>
-          )}
-
-          <Box component="form" onSubmit={handleLogin} noValidate sx={{ mt: 2 }}>
-            <TextField
-              label="Email"
-              fullWidth
-              margin="normal"
-              name="email"
-              autoComplete="email"
-              value={formData.email}
-              onChange={handleChange}
-              error={!!formErrors.email}
-              helperText={formErrors.email || ''}
-              disabled={loading || resendingVerification}
-              size="small"
-            />
-            
-            <TextField
-              type="password"
-              label="Password"
-              fullWidth
-              margin="normal"
-              name="password"
-              autoComplete="current-password"
-              value={formData.password}
-              onChange={handleChange}
-              error={!!formErrors.password}
-              helperText={formErrors.password || ''}
-              disabled={loading || resendingVerification}
-              size="small"
-            />
-            
-            <Button
-              type="submit"
-              variant="contained"
-              fullWidth
-              disabled={loading || resendingVerification}
-              sx={{ mt: 3, py: 1.5 }}
-            >
-              {loading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
-            </Button>
-
-            <Box sx={{ mt: 3 }}>
-              <Typography variant="body2" align="center">
-                Don't have an account?{' '}
-                <Link 
-                  to="/register" 
-                  style={{ 
-                    color: 'primary.main', 
-                    textDecoration: 'none', 
-                    fontWeight: 500 
-                  }}
-                >
-                  Sign up
-                </Link>
-              </Typography>
-              <Typography variant="body2" align="center" sx={{ mt: 1 }}>
-                <MuiLink 
-                  component="button"
-                  variant="body2"
-                  onClick={() => {
-                    // TODO: Implementare la funzionalità di recupero password
-                    alert('Forgot password functionality will be implemented soon!');
-                  }}
-                  sx={{ textDecoration: 'none', cursor: 'pointer' }}
-                >
-                  Forgot password?
-                </MuiLink>
-              </Typography>
-            </Box>
+          <Box sx={{ textAlign: 'right', mt: 1 }}>
+            <Link component={RouterLink} to="/forgot-password" variant="body2">
+              Password dimenticata?
+            </Link>
           </Box>
-        </CardContent>
-      </Card>
-    </Container>
+          
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            sx={{ mt: 3 }}
+            disabled={isLoading}
+          >
+            {isLoading ? <CircularProgress size={24} /> : 'Accedi'}
+          </Button>
+          
+          <Box sx={{ mt: 3, mb: 2 }}>
+            <Divider>
+              <Typography variant="body2" color="text.secondary">
+                oppure
+              </Typography>
+            </Divider>
+          </Box>
+          
+          <Stack direction="row" spacing={2}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<GoogleIcon />}
+              onClick={handleGoogleLogin}
+              disabled={isLoading}
+            >
+              Google
+            </Button>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<AppleIcon />}
+              onClick={handleAppleLogin}
+              disabled={isLoading}
+            >
+              Apple
+            </Button>
+          </Stack>
+          
+          <Box sx={{ mt: 3, textAlign: 'center' }}>
+            <Typography variant="body2">
+              Non hai un account?{' '}
+              <Link component={RouterLink} to="/register" variant="body2">
+                Registrati ora
+              </Link>
+            </Typography>
+          </Box>
+        </Box>
+      </Paper>
+    </Box>
   );
 };
 

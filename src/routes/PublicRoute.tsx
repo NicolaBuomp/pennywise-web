@@ -1,7 +1,7 @@
 // src/routes/PublicRoute.tsx
 import { Navigate, Outlet } from 'react-router-dom';
 import { useSelector } from 'react-redux';
-import { selectIsAuthenticated, selectLoading } from '../store/slices/authSlice';
+import { selectIsAuthenticated, selectLoading } from '../redux/slices/authSlice';
 import { Box, CircularProgress, Typography } from '@mui/material';
 
 interface PublicRouteProps {

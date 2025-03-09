@@ -1,376 +1,303 @@
-// src/pages/auth/Register.tsx
-import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { z } from 'zod';
-import { 
-  TextField, 
-  Button, 
-  Typography, 
-  Container, 
-  Paper, 
-  Box, 
-  Alert, 
-  CircularProgress,
+import React, { useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { Link as RouterLink } from 'react-router-dom';
+import {
+  Box,
+  Button,
+  TextField,
+  Typography,
+  Link,
   Stack,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
+  InputAdornment,
+  IconButton,
+  Divider,
+  Paper,
+  Alert,
+  CircularProgress
 } from '@mui/material';
-import { useAppDispatch, useAppSelector } from '../../hooks';
-import { 
-  registerUser, 
-  clearError, 
-  selectError, 
-  selectLoading, 
-  selectRegistrationSuccess,
-  resetRegistrationSuccess,
-  selectEmailVerificationSent,
-  resetEmailVerificationSent
-} from '../../store/slices/authSlice';
+import {
+  Visibility,
+  VisibilityOff,
+  Google as GoogleIcon,
+  Apple as AppleIcon
+} from '@mui/icons-material';
 
-// Schema di validazione per la registrazione
-const registerSchema = z.object({
-  firstName: z.string().min(2, { message: "First name must be at least 2 characters" }),
-  lastName: z.string().min(2, { message: "Last name must be at least 2 characters" }),
-  email: z.string().email({ message: "Please enter a valid email address" }),
-  password: z.string().min(8, { message: "Password must be at least 8 characters" })
-    .regex(/[A-Z]/, { message: "Password must contain at least 1 uppercase letter" })
-    .regex(/[a-z]/, { message: "Password must contain at least 1 lowercase letter" })
-    .regex(/[0-9]/, { message: "Password must contain at least 1 number" }),
-  confirmPassword: z.string()
-}).refine((data) => data.password === data.confirmPassword, {
-  message: "Passwords don't match",
-  path: ["confirmPassword"]
-});
+import { register, loginWithProvider } from '../../redux/thunks/authThunks';
+import { AppDispatch, RootState } from '../../redux/store';
 
-type RegisterForm = z.infer<typeof registerSchema>;
+interface FormData {
+  username: string;
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
 
-export const Register = () => {
-  const navigate = useNavigate();
-  const dispatch = useAppDispatch();
+interface FormErrors {
+  username?: string;
+  email?: string;
+  password?: string;
+  confirmPassword?: string;
+}
+
+const Register: React.FC = () => {
+  const dispatch = useDispatch<AppDispatch>();
+  const { isLoading, error } = useSelector((state: RootState) => state.auth);
   
-  const loading = useAppSelector(selectLoading);
-  const error = useAppSelector(selectError);
-  const registrationSuccess = useAppSelector(selectRegistrationSuccess);
-  const emailVerificationSent = useAppSelector(selectEmailVerificationSent);
-  
-  const [formData, setFormData] = useState<RegisterForm>({
-    firstName: '',
-    lastName: '',
+  const [formData, setFormData] = useState<FormData>({
+    username: '',
     email: '',
     password: '',
-    confirmPassword: ''
+    confirmPassword: '',
   });
   
-  const [formErrors, setFormErrors] = useState<Record<string, string>>({});
-  const [verificationDialogOpen, setVerificationDialogOpen] = useState(false);
-
-  // Mostra finestra di dialogo di verifica quando la registrazione ha successo e la verifica via email è richiesta
-  useEffect(() => {
-    if (registrationSuccess && emailVerificationSent) {
-      setVerificationDialogOpen(true);
-    }
-  }, [registrationSuccess, emailVerificationSent]);
-
-  // Pulizia allo smontaggio
-  useEffect(() => {
-    return () => {
-      dispatch(clearError());
-      dispatch(resetRegistrationSuccess());
-      dispatch(resetEmailVerificationSent());
-    };
-  }, [dispatch]);
-
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [formErrors, setFormErrors] = useState<FormErrors>({});
+  
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData({
+      ...formData,
+      [name]: value,
+    });
     
-    // Pulisce l'errore relativo quando l'utente digita
-    if (formErrors[name]) {
-      setFormErrors(prev => ({ ...prev, [name]: '' }));
-    }
-    
-    // Pulisce l'errore API quando l'utente inizia a digitare
-    if (error) {
-      dispatch(clearError());
+    // Reset errore specifico quando l'utente inizia a digitare
+    if (formErrors[name as keyof FormErrors]) {
+      setFormErrors({
+        ...formErrors,
+        [name]: undefined,
+      });
     }
   };
-
-  const validateForm = () => {
-    try {
-      registerSchema.parse(formData);
-      setFormErrors({});
-      return true;
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        const newErrors: Record<string, string> = {};
-        error.errors.forEach(err => {
-          if (err.path) {
-            newErrors[err.path[0]] = err.message;
-          }
-        });
-        setFormErrors(newErrors);
-      }
-      return false;
+  
+  const validateForm = (): boolean => {
+    const errors: FormErrors = {};
+    
+    // Validazione username
+    if (!formData.username) {
+      errors.username = 'Il nome utente è obbligatorio';
+    } else if (formData.username.length < 3) {
+      errors.username = 'Il nome utente deve contenere almeno 3 caratteri';
     }
+    
+    // Validazione email
+    if (!formData.email) {
+      errors.email = 'L\'email è obbligatoria';
+    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
+      errors.email = 'Email non valida';
+    }
+    
+    // Validazione password
+    if (!formData.password) {
+      errors.password = 'La password è obbligatoria';
+    } else if (formData.password.length < 8) {
+      errors.password = 'La password deve contenere almeno 8 caratteri';
+    }
+    
+    // Validazione conferma password
+    if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Le password non coincidono';
+    }
+    
+    setFormErrors(errors);
+    return Object.keys(errors).length === 0;
   };
-
-  const handleSubmit = async (e: React.FormEvent) => {
+  
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    // Pulisce eventuali errori precedenti
-    dispatch(clearError());
+    if (!validateForm()) {
+      return;
+    }
     
-    if (validateForm()) {
-      try {
-        await dispatch(registerUser({
-          email: formData.email,
-          password: formData.password,
-          firstName: formData.firstName,
-          lastName: formData.lastName
-        })).unwrap();
-        // La gestione del successo avviene nell'useEffect che mostra la finestra di dialogo
-      } catch (err) {
-        // L'errore è gestito dallo stato Redux
-      }
+    try {
+      const userData = {
+        username: formData.username,
+        displayName: formData.username,
+      };
+      
+      await dispatch(register(formData.email, formData.password, userData));
+      // In caso di successo, il reindirizzamento viene gestito in App.tsx
+    } catch (error) {
+      // Errore già gestito nel reducer
     }
   };
-
-  const handleVerificationDialogClose = () => {
-    setVerificationDialogOpen(false);
-    navigate('/login', { 
-      state: { 
-        message: 'Please check your email to verify your account before logging in.' 
-      }
-    });
-    dispatch(resetRegistrationSuccess());
-    dispatch(resetEmailVerificationSent());
+  
+  const handleGoogleLogin = async () => {
+    try {
+      await dispatch(loginWithProvider('google'));
+    } catch (error) {
+      // Errore già gestito nel reducer
+    }
   };
-
+  
+  const handleAppleLogin = async () => {
+    try {
+      await dispatch(loginWithProvider('apple'));
+    } catch (error) {
+      // Errore già gestito nel reducer
+    }
+  };
+  
+  const togglePasswordVisibility = () => {
+    setShowPassword(!showPassword);
+  };
+  
   return (
-    <>
-      <Container component="main" maxWidth="lg" sx={{ height: '100vh', display: 'flex', py: 4 }}>
-        {/* Contenitore principale */}
-        <Box sx={{ display: 'flex', width: '100%', flexDirection: { xs: 'column', md: 'row' } }}>
-          {/* Lato sinistro - Form */}
-          <Box
-            sx={{ 
-              flex: 1,
-              display: 'flex', 
-              flexDirection: 'column', 
-              alignItems: 'center',
-              justifyContent: 'center',
-              p: 3
+    <Box
+      sx={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        width: '100%',
+        maxWidth: 450,
+      }}
+    >
+      <Paper 
+        elevation={3} 
+        sx={{ 
+          p: 4, 
+          width: '100%',
+          borderRadius: 2
+        }}
+      >
+        <Box sx={{ mb: 3, textAlign: 'center' }}>
+          <Typography component="h1" variant="h4" gutterBottom>
+            Crea un account
+          </Typography>
+          <Typography variant="body2" color="text.secondary">
+            Inizia a gestire le tue spese condivise con Pennywise
+          </Typography>
+        </Box>
+        
+        {error && (
+          <Alert severity="error" sx={{ mb: 3 }}>
+            {error}
+          </Alert>
+        )}
+        
+        <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            id="username"
+            label="Nome utente"
+            name="username"
+            autoComplete="username"
+            autoFocus
+            value={formData.username}
+            onChange={handleChange}
+            error={!!formErrors.username}
+            helperText={formErrors.username}
+          />
+          
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            id="email"
+            label="Email"
+            name="email"
+            autoComplete="email"
+            value={formData.email}
+            onChange={handleChange}
+            error={!!formErrors.email}
+            helperText={formErrors.email}
+          />
+          
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="password"
+            label="Password"
+            type={showPassword ? 'text' : 'password'}
+            id="password"
+            autoComplete="new-password"
+            value={formData.password}
+            onChange={handleChange}
+            error={!!formErrors.password}
+            helperText={formErrors.password}
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    aria-label="toggle password visibility"
+                    onClick={togglePasswordVisibility}
+                    edge="end"
+                  >
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
             }}
+          />
+          
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            name="confirmPassword"
+            label="Conferma password"
+            type={showPassword ? 'text' : 'password'}
+            id="confirmPassword"
+            autoComplete="new-password"
+            value={formData.confirmPassword}
+            onChange={handleChange}
+            error={!!formErrors.confirmPassword}
+            helperText={formErrors.confirmPassword}
+          />
+          
+          <Button
+            type="submit"
+            fullWidth
+            variant="contained"
+            sx={{ mt: 3 }}
+            disabled={isLoading}
           >
-            <Paper 
-              elevation={3} 
-              sx={{ 
-                p: 4, 
-                display: 'flex', 
-                flexDirection: 'column', 
-                width: '100%',
-                maxWidth: 450
-              }}
-            >
-              <Typography component="h1" variant="h5" sx={{ mb: 3, fontWeight: 'bold' }}>
-                Create your PennyWise account
+            {isLoading ? <CircularProgress size={24} /> : 'Registrati'}
+          </Button>
+          
+          <Box sx={{ mt: 3, mb: 2 }}>
+            <Divider>
+              <Typography variant="body2" color="text.secondary">
+                oppure
               </Typography>
-              
-              {error && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                  {error}
-                </Alert>
-              )}
-              
-              <Box component="form" onSubmit={handleSubmit} noValidate>
-                {/* Campi nome in riga con Stack */}
-                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2} sx={{ mb: 1 }}>
-                  <Box sx={{ flex: 1 }}>
-                    <TextField
-                      margin="normal"
-                      required
-                      fullWidth
-                      id="firstName"
-                      label="First Name"
-                      name="firstName"
-                      autoComplete="given-name"
-                      value={formData.firstName}
-                      onChange={handleChange}
-                      error={!!formErrors.firstName}
-                      helperText={formErrors.firstName || ''}
-                      size="small"
-                      disabled={loading}
-                    />
-                  </Box>
-                  <Box sx={{ flex: 1 }}>
-                    <TextField
-                      margin="normal"
-                      required
-                      fullWidth
-                      id="lastName"
-                      label="Last Name"
-                      name="lastName"
-                      autoComplete="family-name"
-                      value={formData.lastName}
-                      onChange={handleChange}
-                      error={!!formErrors.lastName}
-                      helperText={formErrors.lastName || ''}
-                      size="small"
-                      disabled={loading}
-                    />
-                  </Box>
-                </Stack>
-                
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  id="email"
-                  label="Email Address"
-                  name="email"
-                  autoComplete="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  error={!!formErrors.email}
-                  helperText={formErrors.email || ''}
-                  size="small"
-                  disabled={loading}
-                />
-                
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  name="password"
-                  label="Password"
-                  type="password"
-                  id="password"
-                  autoComplete="new-password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  error={!!formErrors.password}
-                  helperText={formErrors.password || ''}
-                  size="small"
-                  disabled={loading}
-                />
-                
-                <TextField
-                  margin="normal"
-                  required
-                  fullWidth
-                  name="confirmPassword"
-                  label="Confirm Password"
-                  type="password"
-                  id="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  error={!!formErrors.confirmPassword}
-                  helperText={formErrors.confirmPassword || ''}
-                  size="small"
-                  sx={{ mb: 3 }}
-                  disabled={loading}
-                />
-                
-                <Button
-                  type="submit"
-                  fullWidth
-                  variant="contained"
-                  color="primary"
-                  disabled={loading}
-                  sx={{ py: 1.5, mt: 1 }}
-                >
-                  {loading ? (
-                    <CircularProgress size={24} color="inherit" />
-                  ) : (
-                    'Create Account'
-                  )}
-                </Button>
-
-                <Box sx={{ mt: 3, textAlign: 'center' }}>
-                  <Typography variant="body2">
-                    Already have an account?{' '}
-                    <Link to="/login" style={{ color: 'primary.main', textDecoration: 'none', fontWeight: 500 }}>
-                      Sign in
-                    </Link>
-                  </Typography>
-                </Box>
-              </Box>
-            </Paper>
+            </Divider>
           </Box>
           
-          {/* Lato destro - Branding/Immagine */}
-          <Box
-            sx={{ 
-              flex: 1,
-              display: { xs: 'none', md: 'flex' }, 
-              bgcolor: 'primary.main',
-              flexDirection: 'column',
-              alignItems: 'center',
-              justifyContent: 'center',
-              color: 'white',
-              p: 4,
-              borderRadius: 2
-            }}
-          >
-            <Typography variant="h4" component="h2" fontWeight="bold" gutterBottom>
-              Welcome to PennyWise
-            </Typography>
-            <Typography variant="subtitle1" sx={{ mb: 4, opacity: 0.9 }}>
-              Your personal finance management solution
-            </Typography>
-            <Box
-              sx={{
-                width: 200,
-                height: 200,
-                borderRadius: '50%',
-                bgcolor: 'rgba(255,255,255,0.2)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}
+          <Stack direction="row" spacing={2}>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<GoogleIcon />}
+              onClick={handleGoogleLogin}
+              disabled={isLoading}
             >
-              <Typography variant="h2" component="span">
-                💰
-              </Typography>
-            </Box>
-            
-            <Box sx={{ mt: 4, maxWidth: 400, textAlign: 'center' }}>
-              <Typography variant="body1" sx={{ opacity: 0.9 }}>
-                Take control of your finances with PennyWise. Track your spending, manage your budget, and reach your financial goals with ease.
-              </Typography>
-            </Box>
+              Google
+            </Button>
+            <Button
+              fullWidth
+              variant="outlined"
+              startIcon={<AppleIcon />}
+              onClick={handleAppleLogin}
+              disabled={isLoading}
+            >
+              Apple
+            </Button>
+          </Stack>
+          
+          <Box sx={{ mt: 3, textAlign: 'center' }}>
+            <Typography variant="body2">
+              Hai già un account?{' '}
+              <Link component={RouterLink} to="/login" variant="body2">
+                Accedi
+              </Link>
+            </Typography>
           </Box>
         </Box>
-      </Container>
-
-      {/* Finestra di dialogo per la verifica email */}
-      <Dialog
-        open={verificationDialogOpen}
-        onClose={handleVerificationDialogClose}
-        aria-labelledby="verification-dialog-title"
-        aria-describedby="verification-dialog-description"
-      >
-        <DialogTitle id="verification-dialog-title">
-          Email Verification Required
-        </DialogTitle>
-        <DialogContent>
-          <DialogContentText id="verification-dialog-description">
-            We've sent a verification link to <strong>{formData.email}</strong>. Please check your email and click the link to verify your account before logging in.
-          </DialogContentText>
-          <DialogContentText sx={{ mt: 2 }}>
-            If you don't see the email, please check your spam folder.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={handleVerificationDialogClose} color="primary" autoFocus>
-            Continue to Login
-          </Button>
-        </DialogActions>
-      </Dialog>
-    </>
+      </Paper>
+    </Box>
   );
 };
 

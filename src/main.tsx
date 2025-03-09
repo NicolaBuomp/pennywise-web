@@ -1,13 +1,20 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import App from './App'
-import { Provider } from 'react-redux'
-import { store } from './store'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { Provider } from 'react-redux';
+import { PersistGate } from 'redux-persist/integration/react';
+import { store, persistor } from './redux/store';
+import App from './App';
 
-ReactDOM.createRoot(document.getElementById('root')!).render(
+// Importa stili globali se necessario
+import './index.css';
+import LoadingScreen from './components/common/LoadingScreen';
+
+ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
   <React.StrictMode>
     <Provider store={store}>
-      <App />
+      <PersistGate loading={<LoadingScreen />} persistor={persistor}>
+        <App />
+      </PersistGate>
     </Provider>
   </React.StrictMode>
-)
+);

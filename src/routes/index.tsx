@@ -6,8 +6,8 @@ import PublicRoute from './PublicRoute';
 import ProtectedRoute from './ProtectedRoute';
 import { useEffect } from 'react';
 import { useAppDispatch } from '../hooks';
-import { checkSession } from '../store/slices/authSlice';
-import Dashboard from '../pages/protected/Dasboard';
+import { checkSession } from '../redux/slices/authSlice';
+import Dashboard from '../pages/dashboard/Dasboard';
 
 const AppRoutes = () => {
   const dispatch = useAppDispatch();

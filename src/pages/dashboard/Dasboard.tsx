@@ -1,9 +1,9 @@
 // src/pages/protected/Dashboard.tsx
 import { Box, Typography, Container, Paper, Grid, Button } from '@mui/material';
 import { useSelector } from 'react-redux';
-import { selectUser } from '../../store/slices/authSlice';
+import { selectUser } from '../../redux/slices/authSlice';
 import { useAppDispatch } from '../../hooks';
-import { logoutUser } from '../../store/slices/authSlice';
+import { logoutUser } from '../../redux/slices/authSlice';
 
 const Dashboard = () => {
   const user = useSelector(selectUser);

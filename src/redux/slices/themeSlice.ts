@@ -1,6 +1,6 @@
 // src/store/slices/themeSlice.ts
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { RootState } from '..';
+import { RootState } from '../store';
 
 // Theme types
 export type ThemeMode = 'light' | 'dark' | 'system';
