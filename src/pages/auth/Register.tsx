@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -26,14 +26,16 @@ import { register, loginWithProvider } from '../../redux/thunks/authThunks';
 import { AppDispatch, RootState } from '../../redux/store';
 
 interface FormData {
-  username: string;
+  displayName: string;
+  phoneNumber: string;
   email: string;
   password: string;
   confirmPassword: string;
 }
 
 interface FormErrors {
-  username?: string;
+  displayName?: string;
+  phoneNumber?: string;
   email?: string;
   password?: string;
   confirmPassword?: string;
@@ -41,10 +43,12 @@ interface FormErrors {
 
 const Register: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const { isLoading, error } = useSelector((state: RootState) => state.auth);
   
   const [formData, setFormData] = useState<FormData>({
-    username: '',
+    displayName: '',
+    phoneNumber: '',
     email: '',
     password: '',
     confirmPassword: '',
@@ -72,11 +76,14 @@ const Register: React.FC = () => {
   const validateForm = (): boolean => {
     const errors: FormErrors = {};
     
-    // Validazione username
-    if (!formData.username) {
-      errors.username = 'Il nome utente è obbligatorio';
-    } else if (formData.username.length < 3) {
-      errors.username = 'Il nome utente deve contenere almeno 3 caratteri';
+    // Validazione display name
+    if (!formData.displayName) {
+      errors.displayName = 'Il nome visualizzato è obbligatorio';
+    }
+    
+    // Validazione numero di telefono (opzionale)
+    if (formData.phoneNumber && !/^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/im.test(formData.phoneNumber)) {
+      errors.phoneNumber = 'Formato numero di telefono non valido';
     }
     
     // Validazione email
@@ -111,12 +118,23 @@ const Register: React.FC = () => {
     
     try {
       const userData = {
-        username: formData.username,
-        displayName: formData.username,
+        displayName: formData.displayName,
+        phoneNumber: formData.phoneNumber || null,
       };
       
-      await dispatch(register(formData.email, formData.password, userData));
-      // In caso di successo, il reindirizzamento viene gestito in App.tsx
+      const result = await dispatch(register(formData.email, formData.password, userData));
+      
+      // Controlla se è necessaria la verifica email
+      if (result.requiresEmailVerification) {
+        // Reindirizza alla pagina di attesa verifica email
+        navigate('/auth/waiting-verification', { 
+          state: { 
+            email: formData.email 
+          } 
+        });
+      } else {
+        navigate('/dashboard');
+      }
     } catch (error) {
       // Errore già gestito nel reducer
     }
@@ -176,19 +194,32 @@ const Register: React.FC = () => {
         )}
         
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
+          
           <TextField
             margin="normal"
             required
             fullWidth
-            id="username"
-            label="Nome utente"
-            name="username"
-            autoComplete="username"
-            autoFocus
-            value={formData.username}
+            id="displayName"
+            label="Nome completo"
+            name="displayName"
+            autoComplete="name"
+            value={formData.displayName}
             onChange={handleChange}
-            error={!!formErrors.username}
-            helperText={formErrors.username}
+            error={!!formErrors.displayName}
+            helperText={formErrors.displayName}
+          />
+          
+          <TextField
+            margin="normal"
+            fullWidth
+            id="phoneNumber"
+            label="Numero di telefono (opzionale)"
+            name="phoneNumber"
+            autoComplete="tel"
+            value={formData.phoneNumber}
+            onChange={handleChange}
+            error={!!formErrors.phoneNumber}
+            helperText={formErrors.phoneNumber}
           />
           
           <TextField

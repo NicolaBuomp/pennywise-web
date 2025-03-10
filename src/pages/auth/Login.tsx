@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import {
   Box,
   Button,
@@ -37,6 +37,7 @@ interface FormErrors {
 
 const Login: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
   const { isLoading, error } = useSelector((state: RootState) => state.auth);
   
   const [formData, setFormData] = useState<FormData>({
@@ -90,10 +91,21 @@ const Login: React.FC = () => {
     }
     
     try {
-      await dispatch(login(formData.email, formData.password));
-      // In caso di successo, il reindirizzamento viene gestito in App.tsx
-    } catch (error) {
-      // Errore già gestito nel reducer
+      const result = await dispatch(login(formData.email, formData.password));
+      // Se arriva qui, l'email è verificata e possiamo procedere alla dashboard
+      navigate('/dashboard');
+    } catch (error: any) {
+      // Controlla se l'errore è dovuto a email non verificata
+      if (error.message?.includes('Email not confirmed') || 
+          error.code === 'email_not_confirmed') {
+        // Reindirizza alla pagina di attesa verifica
+        navigate('/auth/waiting-verification', { 
+          state: { 
+            email: formData.email 
+          } 
+        });
+      }
+      // Altri errori sono già gestiti nel reducer
     }
   };
   

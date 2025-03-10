@@ -6,6 +6,7 @@ export interface User {
   email: string;
   username: string;
   display_name?: string;
+  phone_number?: string | null;
   avatar_url?: string;
   default_currency?: string;
   language?: string;
@@ -155,5 +156,12 @@ export const {
   updateProfileFailure,
   clearErrors,
 } = authSlice.actions;
+
+// Selettori
+export const selectUser = (state: { auth: AuthState }) => state.auth.user;
+export const selectIsAuthenticated = (state: { auth: AuthState }) => state.auth.isAuthenticated;
+export const selectIsEmailVerified = (state: { auth: AuthState }) => state.auth.isEmailVerified;
+export const selectIsLoading = (state: { auth: AuthState }) => state.auth.isLoading;
+export const selectAuthError = (state: { auth: AuthState }) => state.auth.error;
 
 export default authSlice.reducer;

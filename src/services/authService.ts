@@ -5,6 +5,7 @@ import supabase from '../supabaseClient';
 export interface UserData {
   username?: string;
   displayName?: string;
+  phoneNumber?: string | null;
   defaultCurrency?: string;
   language?: string;
 }
@@ -81,7 +82,8 @@ export const authService = {
       options: {
         data: {
           username: userData.username || email.split('@')[0],
-          display_name: userData.displayName || userData.username || email.split('@')[0],
+          display_name: userData.displayName,
+          phone_number: userData.phoneNumber || null,
           default_currency: userData.defaultCurrency || 'EUR',
           language: userData.language || 'it',
         },
@@ -182,6 +184,7 @@ export const authService = {
       data: {
         display_name: userData.display_name,
         username: userData.username,
+        phone_number: userData.phone_number,
         default_currency: userData.default_currency,
         language: userData.language,
       }
@@ -195,6 +198,7 @@ export const authService = {
       .update({
         display_name: userData.display_name,
         username: userData.username,
+        phone_number: userData.phone_number,
         default_currency: userData.default_currency,
         language: userData.language,
         avatar_url: userData.avatar_url,

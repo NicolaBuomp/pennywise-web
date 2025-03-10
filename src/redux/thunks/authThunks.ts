@@ -30,21 +30,28 @@ export const login = (email: string, password: string) => async (dispatch: AppDi
     const data = await authService.login(email, password);
     const userData = await authService.getCurrentUser();
     
-    if (!data.isEmailVerified) {
-      dispatch(addAlert({
-        type: 'warning',
-        message: 'Verifica la tua email per accedere a tutte le funzionalità. Ti abbiamo inviato un nuovo link di verifica.',
-        autoHideDuration: 10000,
-      }));
-    }
-    
     dispatch(loginSuccess({
       user: userData as User,
       isEmailVerified: data.isEmailVerified
     }));
     
-    return userData;
-  } catch (error) {
+    return {
+      success: true,
+      user: userData
+    };
+  } catch (error: any) {
+    // Se è un errore di email non confermata, lo gestiamo in modo specifico
+    if (error.message?.includes('Email not confirmed') || 
+        error.code === 'email_not_confirmed') {
+      dispatch(loginFailure("Email non verificata. Controlla la tua casella di posta."));
+      // Rilanciamo l'errore con informazioni che ci aiuteranno a identificarlo nel componente
+      throw {
+        ...error,
+        code: 'email_not_confirmed',
+        message: 'Email not confirmed'
+      };
+    }
+    
     dispatch(loginFailure((error as Error).message));
     throw error;
   }
@@ -75,20 +82,19 @@ export const register = (email: string, password: string, userData: UserData) =>
     const data = await authService.register(email, password, userData);
     const userProfile = await authService.getCurrentUser();
     
-    if (!data.isEmailVerified) {
-      dispatch(addAlert({
-        type: 'info',
-        message: 'Ti abbiamo inviato un\'email di verifica. Per favore controlla la tua casella di posta e conferma il tuo indirizzo email.',
-        autoHideDuration: 10000,
-      }));
-    }
-    
     dispatch(registerSuccess({
       user: userProfile as User,
       isEmailVerified: data.isEmailVerified
     }));
     
-    return userProfile;
+    // Reindirizza alla pagina di attesa verifica email invece della dashboard
+    if (!data.isEmailVerified) {
+      // Utilizziamo il history da react-router, ma potremmo anche utilizzare
+      // una callback o una funzione passata come parametro
+      return { success: true, requiresEmailVerification: true, user: userProfile };
+    }
+    
+    return { success: true, requiresEmailVerification: false, user: userProfile };
   } catch (error) {
     dispatch(registerFailure((error as Error).message));
     throw error;

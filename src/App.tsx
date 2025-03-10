@@ -30,6 +30,7 @@ import { checkAuthState } from './redux/thunks/authThunks';
 import LoadingScreen from './components/common/LoadingScreen';
 import AlertManager from './components/common/AlertManager';
 import { Dashboard } from '@mui/icons-material';
+import WaitingVerification from './pages/auth/WaitingVerification';
 
 const App: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -71,6 +72,7 @@ const App: React.FC = () => {
               <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <Login />} />
               <Route path="/register" element={isAuthenticated ? <Navigate to="/" /> : <Register />} />
               <Route path="/auth/confirm-email" element={<ConfirmEmail />} />
+              <Route path="/auth/waiting-verification" element={<WaitingVerification />} />
               {/* <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} /> */}
             </Route>
