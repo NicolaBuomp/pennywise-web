@@ -1,7 +1,6 @@
-// src/pages/auth/WaitingVerification.tsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import {
   Box,
   Paper,
@@ -10,25 +9,34 @@ import {
   CircularProgress,
   Alert,
   TextField,
-  InputAdornment
+  InputAdornment,
+  Stack,
+  Divider
 } from '@mui/material';
-import { Email as EmailIcon } from '@mui/icons-material';
+import { Email as EmailIcon, Logout as LogoutIcon } from '@mui/icons-material';
 
-import { sendEmailVerification } from '../../redux/thunks/authThunks';
-import { AppDispatch } from '../../redux/store';
+import { sendEmailVerification, logout } from '../../redux/thunks/authThunks';
+import { AppDispatch, RootState } from '../../redux/store';
 
 const WaitingVerification: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useDispatch<AppDispatch>();
+  const { user } = useSelector((state: RootState) => state.auth);
   
   const [isResending, setIsResending] = useState<boolean>(false);
   const [emailSent, setEmailSent] = useState<boolean>(false);
   
-  // Recupera l'email dalla location state o mostra un form
   const [email, setEmail] = useState<string>(
-    location.state?.email || ''
+    location.state?.email || user?.email || ''
   );
+  
+  useEffect(() => {
+    // Se non abbiamo né email né utente, reindirizza al login
+    if (!email && !user) {
+      navigate('/login');
+    }
+  }, [email, user, navigate]);
   
   const handleResendVerification = async (): Promise<void> => {
     if (!email) return;
@@ -41,6 +49,15 @@ const WaitingVerification: React.FC = () => {
       console.error('Failed to resend verification email:', error);
     } finally {
       setIsResending(false);
+    }
+  };
+  
+  const handleLogout = async (): Promise<void> => {
+    try {
+      await dispatch(logout());
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
     }
   };
   
@@ -80,7 +97,7 @@ const WaitingVerification: React.FC = () => {
           </Alert>
         )}
         
-        {!location.state?.email && (
+        {!location.state?.email && !user?.email && (
           <Box sx={{ mb: 3 }}>
             <TextField
               fullWidth
@@ -99,12 +116,13 @@ const WaitingVerification: React.FC = () => {
           </Box>
         )}
         
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Stack spacing={2} sx={{ mb: 3 }}>
           <Button
             variant="contained"
             color="primary"
             onClick={handleResendVerification}
             disabled={isResending || !email}
+            fullWidth
           >
             {isResending ? <CircularProgress size={24} /> : 'Invia di nuovo l\'email'}
           </Button>
@@ -112,10 +130,27 @@ const WaitingVerification: React.FC = () => {
           <Button
             variant="outlined"
             onClick={() => navigate('/login')}
+            fullWidth
           >
             Torna al login
           </Button>
-        </Box>
+        </Stack>
+        
+        <Divider sx={{ my: 2 }}>
+          <Typography variant="body2" color="text.secondary">
+            oppure
+          </Typography>
+        </Divider>
+        
+        <Button
+          variant="outlined"
+          color="error"
+          startIcon={<LogoutIcon />}
+          onClick={handleLogout}
+          fullWidth
+        >
+          Logout
+        </Button>
         
         <Box sx={{ mt: 4 }}>
           <Typography variant="body2" color="text.secondary">

@@ -24,7 +24,7 @@ interface AuthState {
 const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
-  isEmailVerified: false,
+  isEmailVerified: false, // Questo dovrebbe già essere false, ma lo ribadiamo
   isLoading: true,
   error: null,
 };
@@ -99,9 +99,9 @@ export const authSlice = createSlice({
       state.isLoading = false;
       state.isAuthenticated = !!action.payload;
       state.user = action.payload;
-      // Se l'utente è loggato, assumiamo che l'email sia verificata
-      // Questo può essere sovrascritto successivamente
-      state.isEmailVerified = !!action.payload;
+      // Rimuoviamo l'assegnazione automatica di isEmailVerified qui
+      // state.isEmailVerified = !!action.payload; <- Rimuovi o commenta questa linea
+      // Lo stato di verifica dell'email sarà impostato dalla funzione checkEmailVerification
     },
     checkAuthFailure: (state) => {
       state.isLoading = false;

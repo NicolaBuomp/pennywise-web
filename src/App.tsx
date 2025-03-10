@@ -17,20 +17,15 @@ import DashboardLayout from './layouts/DashboardLayout';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ConfirmEmail from './pages/auth/ConfirmEmail';
-// import ForgotPassword from './pages/auth/ForgotPassword';
-// import ResetPassword from './pages/auth/ResetPassword';
 
 // Dashboard Pages
-// import Profile from './pages/dashboard/Profile';
-// import Settings from './pages/dashboard/Settings';
+import DashboardPage from './pages/dashboard/Dashboard'; // Importa il componente corretto
 
 // Redux
 import { AppDispatch, RootState } from './redux/store';
 import { checkAuthState } from './redux/thunks/authThunks';
 import LoadingScreen from './components/common/LoadingScreen';
 import AlertManager from './components/common/AlertManager';
-import { Dashboard } from '@mui/icons-material';
-import WaitingVerification from './pages/auth/WaitingVerification';
 
 const App: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
@@ -69,23 +64,31 @@ const App: React.FC = () => {
           <Routes>
             {/* Auth Routes */}
             <Route element={<AuthLayout />}>
-              <Route path="/login" element={isAuthenticated ? <Navigate to="/" /> : <Login />} />
-              <Route path="/register" element={isAuthenticated ? <Navigate to="/" /> : <Register />} />
+              <Route 
+                path="/login" 
+                element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />} 
+              />
+              <Route 
+                path="/register" 
+                element={isAuthenticated ? <Navigate to="/dashboard" /> : <Register />} 
+              />
               <Route path="/auth/confirm-email" element={<ConfirmEmail />} />
-              <Route path="/auth/waiting-verification" element={<WaitingVerification />} />
               {/* <Route path="/forgot-password" element={<ForgotPassword />} />
               <Route path="/reset-password" element={<ResetPassword />} /> */}
             </Route>
-
+  
             {/* Protected Routes */}
-            <Route element={isAuthenticated ? <DashboardLayout /> : <Navigate to="/login" />}>
-              <Route path="/" element={<Dashboard />} />
+            <Route 
+              element={isAuthenticated ? <DashboardLayout /> : <Navigate to="/login" />}
+            >
+              <Route path="/" element={<Navigate to="/dashboard" />} />
+              <Route path="/dashboard" element={<DashboardPage />} /> {/* Usa il componente corretto */}
               {/* <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} /> */}
               
               {/* Altre rotte protette verranno aggiunte qui */}
             </Route>
-
+  
             {/* Catch-all route */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>

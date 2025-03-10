@@ -42,6 +42,7 @@ import {
 import { logout } from '../redux/thunks/authThunks';
 import { toggleTheme } from '../redux/slices/uiSlice';
 import { AppDispatch, RootState } from '../redux/store';
+import EmailVerificationBanner from '../components/common/EmailVerificationBanner';
 
 const drawerWidth = 240;
 
@@ -153,7 +154,7 @@ const DashboardLayout: React.FC = () => {
   );
 
   return (
-    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <AppBar
         position="fixed"
         sx={{
@@ -249,6 +250,7 @@ const DashboardLayout: React.FC = () => {
         }}
       >
         <Container maxWidth="lg" sx={{ py: 2 }}>
+          <EmailVerificationBanner />
           <Outlet />
         </Container>
       </Box>

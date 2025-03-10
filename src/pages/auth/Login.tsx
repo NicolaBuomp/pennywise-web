@@ -92,20 +92,32 @@ const Login: React.FC = () => {
     
     try {
       const result = await dispatch(login(formData.email, formData.password));
-      // Se arriva qui, l'email è verificata e possiamo procedere alla dashboard
-      navigate('/dashboard');
-    } catch (error: any) {
-      // Controlla se l'errore è dovuto a email non verificata
-      if (error.message?.includes('Email not confirmed') || 
-          error.code === 'email_not_confirmed') {
-        // Reindirizza alla pagina di attesa verifica
+      
+      // Controlliamo sia success che isEmailVerified
+      if (result.success === false && result.errorType === 'email_not_verified') {
+        // Email non verificata, reindirizza alla pagina di verifica
+        navigate('/auth/waiting-verification', { 
+          state: { 
+            email: formData.email 
+          } 
+        });
+        return;
+      }
+      
+      // Se l'email è verificata, reindirizza alla dashboard
+      if (result.success && result.isEmailVerified) {
+        navigate('/dashboard');
+      } else if (result.success && !result.isEmailVerified) {
+        // L'utente è autenticato ma l'email non è verificata
         navigate('/auth/waiting-verification', { 
           state: { 
             email: formData.email 
           } 
         });
       }
-      // Altri errori sono già gestiti nel reducer
+    } catch (error) {
+      // Gli errori generici sono già gestiti nel reducer e mostrati nell'UI
+      console.error('Login error:', error);
     }
   };
   

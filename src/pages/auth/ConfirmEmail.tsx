@@ -7,13 +7,15 @@ import {
   Typography,
   Button,
   CircularProgress,
-  Alert
+  Alert,
+  Stack
 } from '@mui/material';
 import { CheckCircleOutline, ErrorOutline } from '@mui/icons-material';
 
 import { AppDispatch } from '../../redux/store';
 import { setEmailVerified } from '../../redux/slices/authSlice';
 import supabase from '../../supabaseClient';
+import { logout, sendEmailVerification } from '../../redux/thunks/authThunks';
 
 /**
  * Componente per la pagina di conferma email
@@ -27,6 +29,8 @@ const ConfirmEmail: React.FC = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<boolean>(false);
+  const [email, setEmail] = useState<string>('');
+  const [isResending, setIsResending] = useState<boolean>(false);
   
   useEffect(() => {
     const verifyEmail = async (): Promise<void> => {
@@ -34,6 +38,11 @@ const ConfirmEmail: React.FC = () => {
         // Ottieni i parametri dall'URL
         const token: string | null = searchParams.get('token');
         const type: string | null = searchParams.get('type');
+        const userEmail: string | null = searchParams.get('email');
+        
+        if (userEmail) {
+          setEmail(userEmail);
+        }
         
         if (!token || type !== 'email_confirmation') {
           setError('Link di conferma non valido. Per favore richiedi un nuovo link di verifica.');
@@ -43,14 +52,21 @@ const ConfirmEmail: React.FC = () => {
         
         // Utilizziamo la funzione di Supabase per verificare il token
         // Nota: Supabase gestisce internamente questa operazione
-        // Il token può essere usato solo una volta e scade dopo un certo tempo
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash: token,
+          type: 'email'
+        });
+        
+        if (error) {
+          throw error;
+        }
         
         // Aggiorniamo lo stato Redux
         dispatch(setEmailVerified(true));
         setSuccess(true);
         setIsLoading(false);
-      } catch (error) {
-        setError((error as Error).message);
+      } catch (error: any) {
+        setError(error.message || 'Errore durante la verifica dell\'email');
         setIsLoading(false);
       }
     };
@@ -64,6 +80,29 @@ const ConfirmEmail: React.FC = () => {
   
   const handleNavigateToDashboard = (): void => {
     navigate('/');
+  };
+  
+  const handleResendVerification = async () => {
+    if (!email) return;
+    
+    setIsResending(true);
+    try {
+      await dispatch(sendEmailVerification(email));
+      setError(null);
+      setIsResending(false);
+    } catch (error) {
+      setError('Errore nell\'invio dell\'email di verifica. Riprova più tardi.');
+      setIsResending(false);
+    }
+  };
+  
+  const handleLogout = async () => {
+    try {
+      await dispatch(logout());
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
   
   return (
@@ -118,15 +157,38 @@ const ConfirmEmail: React.FC = () => {
             <Alert severity="error" sx={{ mb: 3, textAlign: 'left' }}>
               {error || 'Si è verificato un errore durante la verifica dell\'email.'}
             </Alert>
-            <Button
-              variant="contained"
-              color="primary"
-              size="large"
-              onClick={handleNavigateToLogin}
-              sx={{ mt: 2 }}
-            >
-              Torna al Login
-            </Button>
+            
+            {email && (
+              <Box sx={{ mb: 3 }}>
+                <Button
+                  variant="outlined"
+                  color="primary"
+                  onClick={handleResendVerification}
+                  disabled={isResending}
+                  sx={{ mb: 2 }}
+                >
+                  {isResending ? 'Invio in corso...' : 'Richiedi un nuovo link'}
+                </Button>
+              </Box>
+            )}
+            
+            <Stack direction="row" spacing={2} justifyContent="center">
+              <Button
+                variant="contained"
+                color="primary"
+                onClick={handleNavigateToLogin}
+              >
+                Torna al Login
+              </Button>
+              
+              <Button
+                variant="outlined"
+                color="error"
+                onClick={handleLogout}
+              >
+                Logout
+              </Button>
+            </Stack>
           </Box>
         )}
       </Paper>

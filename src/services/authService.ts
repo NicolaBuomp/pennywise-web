@@ -14,42 +14,81 @@ export interface UserData {
  * Servizio per la gestione dell'autenticazione con Supabase
  */
 export const authService = {
-  /**
-   * Effettua il login con email e password
-   * @param email - Email dell'utente
-   * @param password - Password dell'utente
-   * @returns Dati dell'utente autenticato e stato di verifica email
-   */
-  login: async (email: string, password: string) => {
+/**
+ * Effettua il login con email e password
+ * @param email - Email dell'utente
+ * @param password - Password dell'utente
+ * @returns Dati dell'utente autenticato e stato di verifica email
+ */
+login: async (email: string, password: string) => {
+  try {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    if (error) throw error;
+    if (error) {
+      // Controlla se l'errore è dovuto all'email non verificata
+      if (error.message.includes('Email not confirmed') || 
+          error.message.includes('email not verified') ||
+          error.message.includes('not verified') ||
+          error.code === 'email_not_confirmed') {
+        
+        error.code = 'email_not_confirmed';
+        throw error;
+      }
+      throw error;
+    }
     
     // Verifica lo stato di verifica dell'email
     const isEmailVerified = data.user?.email_confirmed_at !== null;
     
-    // Se l'email non è verificata, invia un promemoria per verificarla
-    if (!isEmailVerified) {
-      await authService.sendEmailVerification();
+    return { ...data, isEmailVerified };
+  } catch (error) {
+    // Propaga l'errore per gestirlo nel thunk
+    throw error;
+  }
+},
+
+/**
+ * Invia un'email di verifica all'utente
+ * @param email - Email dell'utente (opzionale, usa l'utente corrente se non specificato)
+ */
+sendEmailVerification: async (email?: string) => {
+  try {
+    let result;
+    
+    if (email) {
+      // Invia email a un indirizzo specifico
+      result = await supabase.auth.resend({
+        type: 'signup',
+        email: email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/confirm-email`
+        }
+      });
+    } else {
+      // Usa l'utente corrente se disponibile
+      const { data: sessionData } = await supabase.auth.getSession();
+      if (!sessionData.session) {
+        throw new Error('Nessun utente attualmente autenticato');
+      }
+      
+      result = await supabase.auth.resend({
+        type: 'signup',
+        email: sessionData.session.user.email || '',
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/confirm-email`
+        }
+      });
     }
     
-    return { ...data, isEmailVerified };
-  },
-
-  /**
-   * Invia un'email di verifica all'utente corrente
-   */
-  sendEmailVerification: async () => {
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email: (await supabase.auth.getUser()).data.user?.email,
-    });
-
-    if (error) throw error;
-  },
+    if (result.error) throw result.error;
+    return result.data;
+  } catch (error) {
+    throw error;
+  }
+},
 
   /**
    * Effettua il login con provider OAuth (Google, Apple)
@@ -82,15 +121,15 @@ export const authService = {
       options: {
         data: {
           username: userData.username || email.split('@')[0],
-          display_name: userData.displayName,
+          display_name: userData.displayName || userData.username || email.split('@')[0],
           phone_number: userData.phoneNumber || null,
           default_currency: userData.defaultCurrency || 'EUR',
           language: userData.language || 'it',
         },
-        emailRedirectTo: `${window.location.origin}/auth/confirm-email`,
+        emailRedirectTo: `${window.location.origin}/auth/confirm-email?email=${encodeURIComponent(email)}`,
       },
     });
-
+  
     if (error) throw error;
     
     // La maggior parte dei provider Supabase richiede verifica email

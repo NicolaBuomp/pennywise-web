@@ -30,26 +30,56 @@ export const login = (email: string, password: string) => async (dispatch: AppDi
     const data = await authService.login(email, password);
     const userData = await authService.getCurrentUser();
     
+    if (!data.isEmailVerified) {
+      dispatch(addAlert({
+        type: 'warning',
+        message: 'Verifica la tua email per accedere a tutte le funzionalità.',
+        autoHideDuration: 10000,
+      }));
+    }
+    
     dispatch(loginSuccess({
-      user: userData as User,
+      user: userData,
       isEmailVerified: data.isEmailVerified
     }));
     
     return {
       success: true,
+      isEmailVerified: data.isEmailVerified,
       user: userData
     };
   } catch (error: any) {
-    // Se è un errore di email non confermata, lo gestiamo in modo specifico
-    if (error.message?.includes('Email not confirmed') || 
-        error.code === 'email_not_confirmed') {
-      dispatch(loginFailure("Email non verificata. Controlla la tua casella di posta."));
-      // Rilanciamo l'errore con informazioni che ci aiuteranno a identificarlo nel componente
-      throw {
-        ...error,
-        code: 'email_not_confirmed',
-        message: 'Email not confirmed'
-      };
+    // Gestiamo l'errore di email non verificata senza interruzioni
+    if (error.message && (
+        error.message.includes('Email not confirmed') || 
+        error.message.includes('email non confermata') ||
+        error.message.includes('not verified') ||
+        error.message.includes('non verificata') ||
+        error.code === 'email_not_confirmed'
+    )) {
+      // Recuperiamo l'utente in ogni caso e lo settiamo come loggato
+      try {
+        const userData = await authService.getCurrentUser();
+        dispatch(loginSuccess({
+          user: userData,
+          isEmailVerified: false
+        }));
+        
+        dispatch(addAlert({
+          type: 'warning',
+          message: 'Email non verificata. Ti preghiamo di verificare la tua email.',
+          autoHideDuration: 10000,
+        }));
+        
+        return {
+          success: true,
+          isEmailVerified: false,
+          user: userData
+        };
+      } catch (innerError) {
+        dispatch(loginFailure('Impossibile completare il login: ' + (innerError as Error).message));
+        throw innerError;
+      }
     }
     
     dispatch(loginFailure((error as Error).message));
@@ -80,22 +110,31 @@ export const register = (email: string, password: string, userData: UserData) =>
   dispatch(registerStart());
   try {
     const data = await authService.register(email, password, userData);
-    const userProfile = await authService.getCurrentUser();
     
-    dispatch(registerSuccess({
-      user: userProfile as User,
-      isEmailVerified: data.isEmailVerified
-    }));
-    
-    // Reindirizza alla pagina di attesa verifica email invece della dashboard
-    if (!data.isEmailVerified) {
-      // Utilizziamo il history da react-router, ma potremmo anche utilizzare
-      // una callback o una funzione passata come parametro
-      return { success: true, requiresEmailVerification: true, user: userProfile };
+    // Nella maggior parte dei casi, dopo la registrazione l'utente non è ancora verificato
+    // ma è autenticato, quindi recuperiamo i suoi dati
+    let userProfile;
+    try {
+      userProfile = await authService.getCurrentUser();
+    } catch (error) {
+      console.error("Couldn't fetch user profile after registration:", error);
+      userProfile = null;
     }
     
-    return { success: true, requiresEmailVerification: false, user: userProfile };
-  } catch (error) {
+    // Imposta lo stato di autenticazione in Redux
+    dispatch(registerSuccess({
+      user: userProfile || { id: '', email: email, username: userData.username || '' },
+      isEmailVerified: data.isEmailVerified || false
+    }));
+    
+    // Restituisci informazioni sulla registrazione e lo stato di verifica
+    return {
+      success: true,
+      requiresEmailVerification: !data.isEmailVerified,
+      email: email,
+      user: userProfile
+    };
+  } catch (error: any) {
     dispatch(registerFailure((error as Error).message));
     throw error;
   }
@@ -119,9 +158,9 @@ export const checkEmailVerification = () => async (dispatch: AppDispatch) => {
 /**
  * Thunk per inviare una nuova email di verifica
  */
-export const sendEmailVerification = () => async (dispatch: AppDispatch) => {
+export const sendEmailVerification = (email?: string) => async (dispatch: AppDispatch) => {
   try {
-    await authService.sendEmailVerification();
+    await authService.sendEmailVerification(email);
     dispatch(addAlert({
       type: 'success',
       message: 'Email di verifica inviata. Controlla la tua casella di posta.',
@@ -163,12 +202,30 @@ export const checkAuthState = () => async (dispatch: AppDispatch) => {
       const userData = await authService.getCurrentUser();
       dispatch(checkAuthSuccess(userData));
       
-      // Dopo aver verificato l'autenticazione, controlla lo stato dell'email
-      dispatch(checkEmailVerification());
+      // Verifica esplicita dello stato dell'email
+      try {
+        const isVerified = await authService.checkEmailVerification();
+        console.log("Email verification status:", isVerified);
+        dispatch(setEmailVerified(isVerified));
+        
+        // Se l'email non è verificata, mostra un alert
+        if (!isVerified) {
+          dispatch(addAlert({
+            type: 'warning',
+            message: 'Verifica il tuo indirizzo email per sbloccare tutte le funzionalità.',
+            autoHideDuration: 10000,
+          }));
+        }
+      } catch (verificationError) {
+        console.error("Error checking email verification:", verificationError);
+        // Se c'è un errore, assumiamo che l'email non sia verificata
+        dispatch(setEmailVerified(false));
+      }
     } else {
       dispatch(checkAuthFailure());
     }
   } catch (error) {
+    console.error("Auth check error:", error);
     dispatch(checkAuthFailure());
   }
 };
