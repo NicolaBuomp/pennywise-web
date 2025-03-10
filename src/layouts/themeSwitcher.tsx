@@ -1,12 +1,6 @@
 import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { 
-  selectThemeMode, 
-  selectIsDarkMode,
-  setThemeMode, 
-  setSystemTheme,
-  ThemeMode
-} from '../../store/slices/themeSlice';
+
 
 import { 
   ToggleButtonGroup, 
@@ -15,6 +9,7 @@ import {
   Typography,
   useTheme
 } from '@mui/material';
+import { selectThemeMode, selectIsDarkMode, setSystemTheme, ThemeMode, setThemeMode } from '@/redux/slices/themeSlice';
 
 interface ThemeSwitcherProps {
   className?: string;

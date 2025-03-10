@@ -112,9 +112,7 @@ const Register: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
     
     try {
       const userData = {
@@ -122,21 +120,11 @@ const Register: React.FC = () => {
         phoneNumber: formData.phoneNumber || null,
       };
       
-      const result = await dispatch(register(formData.email, formData.password, userData));
-      
-      // Controlla se è necessaria la verifica email
-      if (result.requiresEmailVerification) {
-        // Reindirizza alla pagina di attesa verifica email
-        navigate('/auth/waiting-verification', { 
-          state: { 
-            email: formData.email 
-          } 
-        });
-      } else {
-        navigate('/dashboard');
-      }
+      await dispatch(register(formData.email, formData.password, userData));
+      // Indipendentemente dallo stato di verifica, reindirizza in dashboard
+      navigate('/dashboard');
     } catch (error) {
-      // Errore già gestito nel reducer
+      // L'errore viene già gestito nel reducer
     }
   };
   

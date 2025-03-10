@@ -1,3 +1,4 @@
+// App.tsx
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -17,9 +18,10 @@ import DashboardLayout from './layouts/DashboardLayout';
 import Login from './pages/auth/Login';
 import Register from './pages/auth/Register';
 import ConfirmEmail from './pages/auth/ConfirmEmail';
+import WaitingVerification from './pages/auth/WaitingVerification';
 
 // Dashboard Pages
-import DashboardPage from './pages/dashboard/Dashboard'; // Importa il componente corretto
+import Dashboard from './pages/dashboard/Dashboard';
 
 // Redux
 import { AppDispatch, RootState } from './redux/store';
@@ -29,10 +31,9 @@ import AlertManager from './components/common/AlertManager';
 
 const App: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { isLoading, isAuthenticated } = useSelector((state: RootState) => state.auth);
+  const { isLoading, isAuthenticated, isEmailVerified } = useSelector((state: RootState) => state.auth);
   const { theme: themeMode } = useSelector((state: RootState) => state.ui);
 
-  // Crea tema dinamico basato sulle preferenze dell'utente
   const theme = React.useMemo(() => {
     return createTheme({
       ...baseTheme,
@@ -43,12 +44,10 @@ const App: React.FC = () => {
     });
   }, [themeMode]);
 
-  // Verifica lo stato di autenticazione all'avvio dell'app
   useEffect(() => {
     dispatch(checkAuthState());
   }, [dispatch]);
 
-  // Mostra schermata di caricamento durante il controllo dell'autenticazione
   if (isLoading) {
     return <LoadingScreen />;
   }
@@ -58,38 +57,18 @@ const App: React.FC = () => {
       <LocalizationProvider dateAdapter={AdapterDayjs} adapterLocale="it">
         <CssBaseline />
         <Router>
-          {/* Sistema di gestione degli alert globali */}
           <AlertManager />
-          
           <Routes>
-            {/* Auth Routes */}
             <Route element={<AuthLayout />}>
-              <Route 
-                path="/login" 
-                element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />} 
-              />
-              <Route 
-                path="/register" 
-                element={isAuthenticated ? <Navigate to="/dashboard" /> : <Register />} 
-              />
+              <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />} />
+              <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Register />} />
               <Route path="/auth/confirm-email" element={<ConfirmEmail />} />
-              {/* <Route path="/forgot-password" element={<ForgotPassword />} />
-              <Route path="/reset-password" element={<ResetPassword />} /> */}
+              <Route path="/auth/waiting-verification" element={<WaitingVerification />} />
             </Route>
-  
-            {/* Protected Routes */}
-            <Route 
-              element={isAuthenticated ? <DashboardLayout /> : <Navigate to="/login" />}
-            >
+            <Route element={isAuthenticated ? <DashboardLayout /> : <Navigate to="/login" />}>
               <Route path="/" element={<Navigate to="/dashboard" />} />
-              <Route path="/dashboard" element={<DashboardPage />} /> {/* Usa il componente corretto */}
-              {/* <Route path="/profile" element={<Profile />} />
-              <Route path="/settings" element={<Settings />} /> */}
-              
-              {/* Altre rotte protette verranno aggiunte qui */}
+              <Route path="/dashboard" element={<Dashboard />} />
             </Route>
-  
-            {/* Catch-all route */}
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
         </Router>

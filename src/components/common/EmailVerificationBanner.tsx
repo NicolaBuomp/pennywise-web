@@ -1,26 +1,34 @@
-import React, { useState, useEffect } from 'react';
+// src/components/common/EmailVerificationBanner.tsx
+import React, { useState } from 'react';
 import { Alert, Button, Collapse, IconButton, Stack } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '../../redux/store';
 import { sendEmailVerification } from '../../redux/thunks/authThunks';
 
-const EmailVerificationBanner: React.FC = () => {
+interface EmailVerificationBannerProps {
+  displayMode?: 'always' | 'once-per-session';
+}
+
+const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = ({ 
+  displayMode = 'always' 
+}) => {
   const dispatch = useDispatch<AppDispatch>();
   const { isEmailVerified, user } = useSelector((state: RootState) => state.auth);
   const [open, setOpen] = useState(true);
   const [sending, setSending] = useState(false);
-
-  useEffect(() => {
-    // Log per debug
-    console.log("Banner component rendered");
-    console.log("isEmailVerified:", isEmailVerified);
-    console.log("user:", user);
-  }, [isEmailVerified, user]);
+  
+  // Gestisce la visualizzazione "once-per-session"
+  const sessionKey = 'email_banner_dismissed';
+  React.useEffect(() => {
+    if (displayMode === 'once-per-session') {
+      const isDismissed = sessionStorage.getItem(sessionKey) === 'true';
+      setOpen(!isDismissed);
+    }
+  }, [displayMode]);
 
   // Non mostrare il banner se l'email è già verificata
   if (isEmailVerified) {
-    console.log("Email is verified, not showing banner");
     return null;
   }
 
@@ -34,8 +42,13 @@ const EmailVerificationBanner: React.FC = () => {
       setSending(false);
     }
   };
-
-  console.log("Rendering banner, open state:", open);
+  
+  const handleClose = () => {
+    setOpen(false);
+    if (displayMode === 'once-per-session') {
+      sessionStorage.setItem(sessionKey, 'true');
+    }
+  };
 
   return (
     <Collapse in={open}>
@@ -55,7 +68,7 @@ const EmailVerificationBanner: React.FC = () => {
               aria-label="close"
               color="inherit"
               size="small"
-              onClick={() => setOpen(false)}
+              onClick={handleClose}
             >
               <CloseIcon fontSize="inherit" />
             </IconButton>

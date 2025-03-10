@@ -20,6 +20,7 @@ import {
 } from '../slices/authSlice';
 import authService, { UserData } from '../../services/authService';
 import { addAlert } from '../slices/uiSlice';
+import supabase from '@/supabaseClient';
 
 /**
  * Thunk per il login utente con email e password
@@ -27,10 +28,14 @@ import { addAlert } from '../slices/uiSlice';
 export const login = (email: string, password: string) => async (dispatch: AppDispatch) => {
   dispatch(loginStart());
   try {
-    const data = await authService.login(email, password);
-    const userData = await authService.getCurrentUser();
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
     
-    if (!data.isEmailVerified) {
+    const userData = await authService.getCurrentUser();
+    const isEmailVerified = !!data.user.email_confirmed_at;
+    
+    // Mostra un alert di warning, ma non bloccare il login
+    if (!isEmailVerified) {
       dispatch(addAlert({
         type: 'warning',
         message: 'Verifica la tua email per accedere a tutte le funzionalità.',
@@ -38,52 +43,19 @@ export const login = (email: string, password: string) => async (dispatch: AppDi
       }));
     }
     
-    dispatch(loginSuccess({
-      user: userData,
-      isEmailVerified: data.isEmailVerified
-    }));
-    
+    dispatch(loginSuccess({ user: userData, isEmailVerified }));
     return {
       success: true,
-      isEmailVerified: data.isEmailVerified,
+      isEmailVerified,
       user: userData
     };
   } catch (error: any) {
-    // Gestiamo l'errore di email non verificata senza interruzioni
-    if (error.message && (
-        error.message.includes('Email not confirmed') || 
-        error.message.includes('email non confermata') ||
-        error.message.includes('not verified') ||
-        error.message.includes('non verificata') ||
-        error.code === 'email_not_confirmed'
-    )) {
-      // Recuperiamo l'utente in ogni caso e lo settiamo come loggato
-      try {
-        const userData = await authService.getCurrentUser();
-        dispatch(loginSuccess({
-          user: userData,
-          isEmailVerified: false
-        }));
-        
-        dispatch(addAlert({
-          type: 'warning',
-          message: 'Email non verificata. Ti preghiamo di verificare la tua email.',
-          autoHideDuration: 10000,
-        }));
-        
-        return {
-          success: true,
-          isEmailVerified: false,
-          user: userData
-        };
-      } catch (innerError) {
-        dispatch(loginFailure('Impossibile completare il login: ' + (innerError as Error).message));
-        throw innerError;
-      }
-    }
-    
     dispatch(loginFailure((error as Error).message));
-    throw error;
+    return {
+      success: false,
+      errorType: 'login_error',
+      message: (error as Error).message
+    };
   }
 };
 
@@ -197,36 +169,52 @@ export const logout = () => async (dispatch: AppDispatch) => {
 export const checkAuthState = () => async (dispatch: AppDispatch) => {
   dispatch(checkAuthStart());
   try {
-    const session = await authService.getSession();
+    // Prima ottieni la sessione
+    const { data: sessionData } = await supabase.auth.getSession();
+    console.log("checkAuthState -> session data:", sessionData); // log per debug
+    const session = sessionData.session;
+
     if (session) {
+      // La sessione esiste, ottieni i dati utente dal db Supabase
       const userData = await authService.getCurrentUser();
       dispatch(checkAuthSuccess(userData));
       
       // Verifica esplicita dello stato dell'email
-      try {
-        const isVerified = await authService.checkEmailVerification();
-        console.log("Email verification status:", isVerified);
-        dispatch(setEmailVerified(isVerified));
-        
-        // Se l'email non è verificata, mostra un alert
-        if (!isVerified) {
-          dispatch(addAlert({
-            type: 'warning',
-            message: 'Verifica il tuo indirizzo email per sbloccare tutte le funzionalità.',
-            autoHideDuration: 10000,
-          }));
-        }
-      } catch (verificationError) {
-        console.error("Error checking email verification:", verificationError);
-        // Se c'è un errore, assumiamo che l'email non sia verificata
-        dispatch(setEmailVerified(false));
+      const isVerified = !!session.user.email_confirmed_at;
+      console.log("checkAuthState -> email verification status:", isVerified); // log per debug
+      dispatch(setEmailVerified(isVerified));
+      
+      if (!isVerified) {
+        dispatch(addAlert({
+          type: 'warning',
+          message: 'Verifica il tuo indirizzo email per sbloccare tutte le funzionalità.',
+          autoHideDuration: 10000,
+        }));
       }
+      
+      return {
+        success: true,
+        isAuthenticated: true,
+        isEmailVerified: isVerified,
+        user: userData
+      };
     } else {
       dispatch(checkAuthFailure());
+      return {
+        success: false,
+        isAuthenticated: false,
+        isEmailVerified: false
+      };
     }
   } catch (error) {
-    console.error("Auth check error:", error);
+    console.error("Auth check error:", error); // log per debug
     dispatch(checkAuthFailure());
+    return {
+      success: false,
+      isAuthenticated: false,
+      isEmailVerified: false,
+      error
+    };
   }
 };
 

@@ -28,19 +28,11 @@ login: async (email: string, password: string) => {
     });
 
     if (error) {
-      // Controlla se l'errore è dovuto all'email non verificata
-      if (error.message.includes('Email not confirmed') || 
-          error.message.includes('email not verified') ||
-          error.message.includes('not verified') ||
-          error.code === 'email_not_confirmed') {
-        
-        error.code = 'email_not_confirmed';
-        throw error;
-      }
+      // Rimuoviamo il blocco email non verificata per consentire l'accesso comunque
       throw error;
     }
     
-    // Verifica lo stato di verifica dell'email
+    // Determina lo stato di verifica dell'email
     const isEmailVerified = data.user?.email_confirmed_at !== null;
     
     return { ...data, isEmailVerified };
@@ -64,6 +56,7 @@ sendEmailVerification: async (email?: string) => {
         type: 'signup',
         email: email,
         options: {
+          // URL assoluto corretto
           emailRedirectTo: `${window.location.origin}/auth/confirm-email`
         }
       });
@@ -78,6 +71,7 @@ sendEmailVerification: async (email?: string) => {
         type: 'signup',
         email: sessionData.session.user.email || '',
         options: {
+          // URL assoluto corretto
           emailRedirectTo: `${window.location.origin}/auth/confirm-email`
         }
       });
@@ -126,14 +120,14 @@ sendEmailVerification: async (email?: string) => {
           default_currency: userData.defaultCurrency || 'EUR',
           language: userData.language || 'it',
         },
-        emailRedirectTo: `${window.location.origin}/auth/confirm-email?email=${encodeURIComponent(email)}`,
+        // Fix per il redirectTo - assicuriamoci che sia un URL assoluto corretto
+        emailRedirectTo: `${window.location.origin}/auth/confirm-email`,
       },
     });
   
     if (error) throw error;
     
     // La maggior parte dei provider Supabase richiede verifica email
-    // meta.data?.email_confirmed_at sarà null se la verifica è necessaria
     const isEmailVerified = data.user?.email_confirmed_at !== null;
     
     return { ...data, isEmailVerified };
@@ -172,7 +166,7 @@ sendEmailVerification: async (email?: string) => {
    */
   getCurrentUser: async () => {
     const { data } = await supabase.auth.getUser();
-    
+    console.log("authService.getCurrentUser -> getUser:", data.user); // log per debug
     if (!data.user) return null;
     
     // Recupera i dati completi dell'utente dal db
@@ -182,7 +176,12 @@ sendEmailVerification: async (email?: string) => {
       .eq('id', data.user.id)
       .single();
       
-    if (error) throw error;
+    console.log("authService.getCurrentUser -> DB userData:", userData); // log per debug
+      
+    if (error) {
+      console.error("Error fetching user data from DB:", error);
+      throw error;
+    }
     
     return userData as User;
   },
