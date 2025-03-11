@@ -3,8 +3,7 @@ import supabase from '../supabaseClient';
 
 // Interfaccia per i dati aggiuntivi dell'utente durante la registrazione
 export interface UserData {
-  firstName?: string;
-  lastName?: string;
+  displayName?: string;
   phoneNumber?: string | null;
   defaultCurrency?: string;
   language?: string;
@@ -146,8 +145,7 @@ export const authService = {
       password,
       options: {
         data: {
-          first_name: userData.firstName || '',
-          last_name: userData.lastName || '',
+          display_name: userData.displayName,
           phone_number: userData.phoneNumber || null,
           default_currency: userData.defaultCurrency || 'EUR',
           language: userData.language || 'it',
@@ -201,7 +199,7 @@ export const authService = {
     if (!data.user) return null;
     
     const { data: userData, error } = await supabase
-      .from('profiles')
+      .from('users')
       .select('*')
       .eq('id', data.user.id)
       .single();
@@ -262,7 +260,7 @@ export const authService = {
 
     // Aggiorna i dati nella tabella 'profiles'
     const { data: profileData, error: profileError } = await supabase
-      .from('profiles')
+      .from('users')
       .update({
         display_name: userData.display_name,
         username: userData.username,

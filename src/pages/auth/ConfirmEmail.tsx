@@ -2,11 +2,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useDispatch } from 'react-redux';
-import { Box, Paper, Typography, Button, CircularProgress, Alert, Stack } from '@mui/material';
+import { Box, Paper, Typography, CircularProgress, Alert } from '@mui/material';
 import { CheckCircleOutline, ErrorOutline } from '@mui/icons-material';
 import { AppDispatch } from '../../redux/store';
 import { setEmailVerified } from '../../redux/slices/authSlice';
-import supabase from '../../supabaseClient';
 import { checkEmailVerification } from '../../redux/thunks/authThunks';
 
 const ConfirmEmail: React.FC = () => {
@@ -17,6 +16,7 @@ const ConfirmEmail: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
+  const [countdown, setCountdown] = useState(5);
   
   useEffect(() => {
     const verifyEmail = async () => {
@@ -24,13 +24,27 @@ const ConfirmEmail: React.FC = () => {
         // Verifica se c'è un token nell'URL
         const token = searchParams.get('token');
         
-        // Actually check with Supabase if the email is verified
+        // Check with Supabase if the email is verified
         const isVerified = await dispatch(checkEmailVerification());
         
         if (isVerified) {
           // Imposta esplicitamente lo stato di verifica
           dispatch(setEmailVerified(true));
           setSuccess(true);
+          
+          // Start countdown for redirect
+          const intervalId = setInterval(() => {
+            setCountdown(prevCount => {
+              if (prevCount <= 1) {
+                clearInterval(intervalId);
+                navigate('/dashboard');
+                return 0;
+              }
+              return prevCount - 1;
+            });
+          }, 1000);
+          
+          return () => clearInterval(intervalId);
         } else if (token) {
           // Se abbiamo un token ma isVerified è false, potrebbe esserci un ritardo
           // nella propagazione dello stato di verifica
@@ -39,6 +53,20 @@ const ConfirmEmail: React.FC = () => {
               if (verified) {
                 dispatch(setEmailVerified(true));
                 setSuccess(true);
+                
+                // Start countdown for redirect if verified on second attempt
+                const intervalId = setInterval(() => {
+                  setCountdown(prevCount => {
+                    if (prevCount <= 1) {
+                      clearInterval(intervalId);
+                      navigate('/dashboard');
+                      return 0;
+                    }
+                    return prevCount - 1;
+                  });
+                }, 1000);
+                
+                return () => clearInterval(intervalId);
               } else {
                 setError("L'email non risulta ancora verificata. Potrebbe essere necessario attendere qualche minuto.");
               }
@@ -56,24 +84,31 @@ const ConfirmEmail: React.FC = () => {
       }
     };
     verifyEmail();
-  }, [searchParams, dispatch]);
+  }, [searchParams, dispatch, navigate]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', width: '100%', maxWidth: 450 }}>
       <Paper elevation={3} sx={{ p: 4, width: '100%', borderRadius: 2, textAlign: 'center' }}>
         {isLoading ? (
-          <CircularProgress size={60} sx={{ mb: 2 }} />
+          <>
+            <CircularProgress size={60} sx={{ mb: 2 }} />
+            <Typography variant="h6">Verifica in corso...</Typography>
+          </>
         ) : success ? (
           <>
             <CheckCircleOutline color="success" sx={{ fontSize: 60, mb: 2 }} />
-            <Typography variant="h5">Email verificata con successo!</Typography>
-            <Button variant="contained" color="primary" onClick={() => navigate('/dashboard')}>Vai alla Dashboard</Button>
+            <Typography variant="h5" gutterBottom>Email verificata con successo!</Typography>
+            <Typography variant="body1">
+              Verrai reindirizzato alla dashboard in {countdown} secondi...
+            </Typography>
           </>
         ) : (
           <>
             <ErrorOutline color="error" sx={{ fontSize: 60, mb: 2 }} />
-            <Alert severity="error">{error}</Alert>
-            <Button variant="contained" color="primary" onClick={() => navigate('/login')}>Torna al Login</Button>
+            <Alert severity="error" sx={{ mb: 2 }}>{error}</Alert>
+            <Typography variant="body1">
+              Puoi provare a tornare alla pagina di login e accedere nuovamente.
+            </Typography>
           </>
         )}
       </Paper>

@@ -1,328 +1,189 @@
 import React, { useState } from 'react';
-import { Outlet, useNavigate, useLocation } from 'react-router-dom';
-import { useDispatch, useSelector } from 'react-redux';
-import {
+import { Outlet } from 'react-router-dom';
+import { 
+  Box, 
+  Drawer, 
   AppBar,
-  Box,
-  Drawer,
   Toolbar,
-  Typography,
-  Divider,
   IconButton,
-  List,
-  ListItem,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  Badge,
-  Menu,
-  MenuItem,
-  Avatar,
-  useMediaQuery,
+  Typography,
   useTheme,
-  Tooltip,
-  Container
+  useMediaQuery,
+  styled
 } from '@mui/material';
-import {
-  Menu as MenuIcon,
-  Dashboard as DashboardIcon,
-  Group as GroupIcon,
-  Receipt as ReceiptIcon,
-  ShoppingCart as ShoppingCartIcon,
-  BarChart as BarChartIcon,
-  AccountBalance as BalanceIcon,
-  Notifications as NotificationsIcon,
-  AccountCircle as AccountCircleIcon,
-  Settings as SettingsIcon,
-  Logout as LogoutIcon,
-  Brightness4 as DarkModeIcon,
-  Brightness7 as LightModeIcon
-} from '@mui/icons-material';
+import MenuIcon from '@mui/icons-material/Menu';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 
-import { logout } from '../redux/thunks/authThunks';
-import { toggleTheme } from '../redux/slices/uiSlice';
-import { AppDispatch, RootState } from '../redux/store';
+import Sidebar from '../components/dashboard/Sidebar';
 import EmailVerificationBanner from '../components/common/EmailVerificationBanner';
+import { useSelector } from 'react-redux';
+import { RootState } from '../redux/store';
 
-const drawerWidth = 240;
+// Constants
+const DRAWER_WIDTH = 260; // Width of sidebar when open
+const CLOSED_DRAWER_WIDTH = 0;
 
-/**
- * Layout principale per le pagine protette della dashboard
- */
+// Styled components for responsive behavior
+const StyledAppBar = styled(AppBar, {
+  shouldForwardProp: (prop) => prop !== 'open',
+})<{ open: boolean, ismobile: number }>(({ theme, open, ismobile }) => ({
+  zIndex: theme.zIndex.drawer + 1,
+  transition: theme.transitions.create(['width', 'margin'], {
+    easing: theme.transitions.easing.sharp,
+    duration: theme.transitions.duration.leavingScreen,
+  }),
+  ...(open && !ismobile && {
+    marginLeft: DRAWER_WIDTH,
+    width: `calc(100% - ${DRAWER_WIDTH}px)`,
+    transition: theme.transitions.create(['width', 'margin'], {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+  }),
+}));
+
+const StyledDrawer = styled(Drawer, {
+  shouldForwardProp: (prop) => prop !== 'open',
+})<{ open: boolean }>(({ theme, open }) => ({
+  width: DRAWER_WIDTH,
+  flexShrink: 0,
+  whiteSpace: 'nowrap',
+  boxSizing: 'border-box',
+  ...(open && {
+    width: DRAWER_WIDTH,
+    overflowX: 'hidden',
+    transition: theme.transitions.create('width', {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.enteringScreen,
+    }),
+    '& .MuiDrawer-paper': {
+      width: DRAWER_WIDTH,
+      overflowX: 'hidden',
+      transition: theme.transitions.create('width', {
+        easing: theme.transitions.easing.sharp,
+        duration: theme.transitions.duration.enteringScreen,
+      }),
+    },
+  }),
+  ...(!open && {
+    width: CLOSED_DRAWER_WIDTH,
+    overflowX: 'hidden',
+    transition: theme.transitions.create('width', {
+      easing: theme.transitions.easing.sharp,
+      duration: theme.transitions.duration.leavingScreen,
+    }),
+    '& .MuiDrawer-paper': {
+      width: CLOSED_DRAWER_WIDTH,
+      overflowX: 'hidden',
+      transition: theme.transitions.create('width', {
+        easing: theme.transitions.easing.sharp,
+        duration: theme.transitions.duration.leavingScreen,
+      }),
+    },
+  }),
+}));
+
+// Main component
 const DashboardLayout: React.FC = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
-  const [mobileOpen, setMobileOpen] = useState<boolean>(false);
-  const [anchorEl, setAnchorEl] = useState<null | HTMLElement>(null);
-  const [notificationsAnchor, setNotificationsAnchor] = useState<null | HTMLElement>(null);
-  
-  const navigate = useNavigate();
-  const location = useLocation();
-  const dispatch = useDispatch<AppDispatch>();
+  const [drawerOpen, setDrawerOpen] = useState(!isMobile);
+  const { isEmailVerified } = useSelector((state: RootState) => state.auth);
 
-  const { user, isEmailVerified } = useSelector((state: RootState) => state.auth);
-  const { theme: themeMode } = useSelector((state: RootState) => state.ui);
-  
-  const handleDrawerToggle = (): void => {
-    setMobileOpen(!mobileOpen);
+  const handleDrawerToggle = () => {
+    setDrawerOpen(!drawerOpen);
   };
 
-  const handleProfileMenuOpen = (event: React.MouseEvent<HTMLElement>): void => {
-    setAnchorEl(event.currentTarget);
-  };
-
-  const handleNotificationsOpen = (event: React.MouseEvent<HTMLElement>): void => {
-    setNotificationsAnchor(event.currentTarget);
-  };
-
-  const handleMenuClose = (): void => {
-    setAnchorEl(null);
-  };
-
-  const handleNotificationsClose = (): void => {
-    setNotificationsAnchor(null);
-  };
-
-  const handleLogout = async (): Promise<void> => {
-    try {
-      await dispatch(logout());
-      navigate('/login');
-    } catch (error) {
-      console.error('Logout failed:', error);
+  // Function to close drawer on mobile when a menu item is clicked
+  const handleMenuClick = () => {
+    if (isMobile) {
+      setDrawerOpen(false);
     }
   };
 
-  const handleThemeToggle = (): void => {
-    dispatch(toggleTheme());
-  };
-
-  const menuItems = [
-    { text: 'Dashboard', icon: <DashboardIcon />, path: '/' },
-    { text: 'Gruppi', icon: <GroupIcon />, path: '/groups' },
-    { text: 'Spese', icon: <ReceiptIcon />, path: '/expenses' },
-    { text: 'Liste della Spesa', icon: <ShoppingCartIcon />, path: '/shopping-lists' },
-    { text: 'Saldi e Rimborsi', icon: <BalanceIcon />, path: '/balances' },
-    { text: 'Statistiche', icon: <BarChartIcon />, path: '/stats' },
-  ];
-
-  const drawer = (
-    <div>
-      <Toolbar
-        sx={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          px: [1],
-        }}
-      >
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <img 
-            src="/logo.svg" 
-            alt="Pennywise Logo" 
-            style={{ height: 30, marginRight: theme.spacing(1) }}
-          />
-          <Typography
-            variant="h6"
-            color="primary"
-            fontWeight="bold"
-            noWrap
-          >
-            Pennywise
-          </Typography>
-        </Box>
-      </Toolbar>
-      <Divider />
-      <List>
-        {menuItems.map((item) => (
-          <ListItem key={item.text} disablePadding>
-            <ListItemButton
-              selected={location.pathname === item.path}
-              onClick={() => {
-                navigate(item.path);
-                if (isMobile) {
-                  setMobileOpen(false);
-                }
-              }}
-            >
-              <ListItemIcon>{item.icon}</ListItemIcon>
-              <ListItemText primary={item.text} />
-            </ListItemButton>
-          </ListItem>
-        ))}
-      </List>
-    </div>
-  );
+  // Effect to handle responsive behavior
+  React.useEffect(() => {
+    // Close drawer by default on mobile, open by default on desktop
+    setDrawerOpen(!isMobile);
+  }, [isMobile]);
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
-      <AppBar
-        position="fixed"
-        sx={{
-          zIndex: (theme) => theme.zIndex.drawer + 1,
-        }}
+    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+      {/* App bar */}
+      <StyledAppBar 
+        position="fixed" 
+        open={drawerOpen} 
+        ismobile={isMobile ? 1 : 0}
       >
         <Toolbar>
           <IconButton
             color="inherit"
             aria-label="open drawer"
-            edge="start"
             onClick={handleDrawerToggle}
-            sx={{ mr: 2, display: { md: 'none' } }}
+            edge="start"
+            sx={{ mr: 2 }}
           >
-            <MenuIcon />
+            {drawerOpen ? <ChevronLeftIcon /> : <MenuIcon />}
           </IconButton>
-          <Typography variant="h6" noWrap component="div" sx={{ flexGrow: 1 }}>
-            Pennywise
+          <Typography variant="h6" noWrap component="div">
+            Penny Wise
           </Typography>
-          
-          <Box sx={{ display: 'flex' }}>
-            <Tooltip title={themeMode === 'light' ? 'Modalità scura' : 'Modalità chiara'}>
-              <IconButton color="inherit" onClick={handleThemeToggle}>
-                {themeMode === 'light' ? <DarkModeIcon /> : <LightModeIcon />}
-              </IconButton>
-            </Tooltip>
-            
-            <Tooltip title="Notifiche">
-              <IconButton 
-                size="large" 
-                color="inherit" 
-                onClick={handleNotificationsOpen}
-              >
-                <Badge badgeContent={0} color="error">
-                  <NotificationsIcon />
-                </Badge>
-              </IconButton>
-            </Tooltip>
-            
-            <Tooltip title="Profilo">
-              <IconButton
-                size="large"
-                edge="end"
-                aria-label="account of current user"
-                aria-haspopup="true"
-                onClick={handleProfileMenuOpen}
-                color="inherit"
-              >
-                {user?.avatar_url ? (
-                  <Avatar 
-                    alt={user.display_name || user.username || 'Utente'} 
-                    src={user.avatar_url} 
-                    sx={{ width: 32, height: 32 }}
-                  />
-                ) : (
-                  <AccountCircleIcon />
-                )}
-              </IconButton>
-            </Tooltip>
-          </Box>
         </Toolbar>
-      </AppBar>
-      
-      <Box
-        component="nav"
-        sx={{ width: { md: drawerWidth }, flexShrink: { md: 0 } }}
-      >
+      </StyledAppBar>
+
+      {/* Sidebar */}
+      {isMobile ? (
+        // Mobile version: temporary drawer that closes when clicking outside
         <Drawer
-          variant={isMobile ? 'temporary' : 'permanent'}
-          open={isMobile ? mobileOpen : true}
+          variant="temporary"
+          open={drawerOpen}
           onClose={handleDrawerToggle}
           ModalProps={{
-            keepMounted: true, // Better performance on mobile
+            keepMounted: true, // Better mobile performance
           }}
           sx={{
-            '& .MuiDrawer-paper': {
-              boxSizing: 'border-box',
-              width: drawerWidth,
+            '& .MuiDrawer-paper': { 
+              width: DRAWER_WIDTH,
+              boxSizing: 'border-box' 
             },
           }}
         >
-          {drawer}
+          <Toolbar /> {/* Space for AppBar */}
+          <Sidebar onMenuItemClick={handleMenuClick} />
         </Drawer>
-      </Box>
-      
-      <Box
-        component="main"
-        sx={{
-          flexGrow: 1,
+      ) : (
+        // Desktop version: persistent drawer
+        <StyledDrawer
+          variant="permanent"
+          open={drawerOpen}
+        >
+          <Toolbar /> {/* Space for AppBar */}
+          <Sidebar onMenuItemClick={handleMenuClick} />
+        </StyledDrawer>
+      )}
+
+      {/* Main content */}
+      <Box 
+        component="main" 
+        sx={{ 
+          flexGrow: 1, 
           p: 3,
-          width: { md: `calc(100% - ${drawerWidth}px)` },
-          mt: '64px', // height of the AppBar
+          width: '100%',
+          height: '100%',
+          overflow: 'auto',
+          display: 'flex',
+          flexDirection: 'column',
         }}
       >
-        <Container maxWidth="lg" sx={{ py: 2 }}>
-          {!isEmailVerified && <EmailVerificationBanner displayMode="once-per-session" />}
+        <Toolbar /> {/* Space for AppBar */}
+        
+        {!isEmailVerified && <EmailVerificationBanner displayMode="once-per-session" />}
+        
+        {/* Main content from child routes */}
+        <Box sx={{ flexGrow: 1, width: '100%', overflow: 'auto' }}>
           <Outlet />
-        </Container>
-      </Box>
-      
-      {/* Menu profilo */}
-      <Menu
-        anchorEl={anchorEl}
-        id="account-menu"
-        open={Boolean(anchorEl)}
-        onClose={handleMenuClose}
-        onClick={handleMenuClose}
-        PaperProps={{
-          elevation: 0,
-          sx: {
-            overflow: 'visible',
-            filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
-            mt: 1.5,
-            '& .MuiAvatar-root': {
-              width: 32,
-              height: 32,
-              ml: -0.5,
-              mr: 1,
-            },
-          },
-        }}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-      >
-        <MenuItem onClick={() => navigate('/profile')}>
-          <ListItemIcon>
-            <AccountCircleIcon fontSize="small" />
-          </ListItemIcon>
-          Il mio profilo
-        </MenuItem>
-        <MenuItem onClick={() => navigate('/settings')}>
-          <ListItemIcon>
-            <SettingsIcon fontSize="small" />
-          </ListItemIcon>
-          Impostazioni
-        </MenuItem>
-        <Divider />
-        <MenuItem onClick={handleLogout}>
-          <ListItemIcon>
-            <LogoutIcon fontSize="small" />
-          </ListItemIcon>
-          Logout
-        </MenuItem>
-      </Menu>
-      
-      {/* Menu notifiche - da implementare */}
-      <Menu
-        anchorEl={notificationsAnchor}
-        id="notifications-menu"
-        open={Boolean(notificationsAnchor)}
-        onClose={handleNotificationsClose}
-        PaperProps={{
-          elevation: 0,
-          sx: {
-            overflow: 'visible',
-            filter: 'drop-shadow(0px 2px 8px rgba(0,0,0,0.32))',
-            mt: 1.5,
-            maxHeight: '50vh',
-            width: 320,
-          },
-        }}
-        transformOrigin={{ horizontal: 'right', vertical: 'top' }}
-        anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
-      >
-        <Box sx={{ p: 2, textAlign: 'center' }}>
-          <Typography variant="body1">Nessuna notifica</Typography>
         </Box>
-      </Menu>
+      </Box>
     </Box>
   );
 };
