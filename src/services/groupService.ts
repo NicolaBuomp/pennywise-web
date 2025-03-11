@@ -1,6 +1,15 @@
 import supabase from '../supabaseClient';
 
 /**
+ * Verifica se l'email dell'utente è verificata
+ * @returns {Promise<boolean>}
+ */
+const checkIsEmailVerified = async () => {
+  const { data: userData } = await supabase.auth.getUser();
+  return !!userData.user?.email_confirmed_at;
+};
+
+/**
  * Servizio per la gestione dei gruppi
  */
 export const groupService = {
@@ -9,6 +18,12 @@ export const groupService = {
    * @returns {Promise<Array>} Lista dei gruppi
    */
   getUserGroups: async () => {
+    // Verifica se l'email è verificata
+    const isVerified = await checkIsEmailVerified();
+    if (!isVerified) {
+      throw new Error('Email non verificata. Verifica la tua email per accedere a questa funzionalità.');
+    }
+
     const { data, error } = await supabase
       .from('group_members')
       .select(`
@@ -335,6 +350,12 @@ export const groupService = {
    * @returns {Promise<boolean>} true se admin
    */
   isGroupAdmin: async (groupId) => {
+    // Verifica se l'email è verificata
+    const isVerified = await checkIsEmailVerified();
+    if (!isVerified) {
+      throw new Error('Email non verificata. Verifica la tua email per accedere a questa funzionalità.');
+    }
+
     const userId = (await supabase.auth.getUser()).data.user.id;
     
     const { data, error } = await supabase

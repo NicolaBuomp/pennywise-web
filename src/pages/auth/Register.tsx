@@ -47,11 +47,11 @@ const Register: React.FC = () => {
   const { isLoading, error } = useSelector((state: RootState) => state.auth);
   
   const [formData, setFormData] = useState<FormData>({
-    displayName: '',
-    phoneNumber: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
+    displayName: 'Admin',
+    phoneNumber: '1234567890',
+    email: 'nicolabuompane96@gmail.com',
+    password: 'Admin123!!',
+    confirmPassword: 'Admin123!!',
   });
   
   const [showPassword, setShowPassword] = useState<boolean>(false);
@@ -118,13 +118,18 @@ const Register: React.FC = () => {
       const userData = {
         displayName: formData.displayName,
         phoneNumber: formData.phoneNumber || null,
+        username: formData.email.split('@')[0], // Ensure username is set
       };
       
-      await dispatch(register(formData.email, formData.password, userData));
-      // Indipendentemente dallo stato di verifica, reindirizza in dashboard
-      navigate('/dashboard');
-    } catch (error) {
-      // L'errore viene già gestito nel reducer
+      const result = await dispatch(register(formData.email, formData.password, userData));
+      
+      // Force redirect to waiting verification page, regardless of result
+      navigate('/auth/waiting-verification', { 
+        state: { email: formData.email } 
+      });
+    } catch (error: any) {
+      console.error("Registration error:", error);
+      // The error is already handled in the reducer
     }
   };
   

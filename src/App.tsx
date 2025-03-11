@@ -60,12 +60,26 @@ const App: React.FC = () => {
           <AlertManager />
           <Routes>
             <Route element={<AuthLayout />}>
-              <Route path="/login" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Login />} />
-              <Route path="/register" element={isAuthenticated ? <Navigate to="/dashboard" /> : <Register />} />
+              <Route path="/login" element={isAuthenticated && isEmailVerified ? <Navigate to="/dashboard" /> : <Login />} />
+              <Route path="/register" element={isAuthenticated && isEmailVerified ? <Navigate to="/dashboard" /> : <Register />} />
               <Route path="/auth/confirm-email" element={<ConfirmEmail />} />
               <Route path="/auth/waiting-verification" element={<WaitingVerification />} />
             </Route>
-            <Route element={isAuthenticated ? <DashboardLayout /> : <Navigate to="/login" />}>
+            
+            {/* Ora controlliamo sia isAuthenticated che isEmailVerified per l'accesso alla dashboard */}
+            <Route 
+              element={
+                isAuthenticated ? (
+                  isEmailVerified ? (
+                    <DashboardLayout />
+                  ) : (
+                    <Navigate to="/auth/waiting-verification" />
+                  )
+                ) : (
+                  <Navigate to="/login" />
+                )
+              }
+            >
               <Route path="/" element={<Navigate to="/dashboard" />} />
               <Route path="/dashboard" element={<Dashboard />} />
             </Route>

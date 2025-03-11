@@ -41,12 +41,14 @@ const Login: React.FC = () => {
   const { isLoading, error } = useSelector((state: RootState) => state.auth);
   
   const [formData, setFormData] = useState<FormData>({
-    email: '',
-    password: '',
+    email: 'vilawap947@makroyal.com',
+    password: 'Admin123!!',
   });
   
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [errors, setErrors] = useState<string | null>(null);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -88,14 +90,39 @@ const Login: React.FC = () => {
     
     if (!validateForm()) return;
     
+    setSubmitting(true);
+    setErrors(null);
+  
     try {
       const result = await dispatch(login(formData.email, formData.password));
-      // Indipendentemente dallo stato di verifica, vai in dashboard 
+      
       if (result.success) {
-        navigate('/dashboard');
+        if (!result.isEmailVerified) {
+          // Reindirizza sempre alla pagina di verifica dell'email se non è verificata
+          navigate('/auth/waiting-verification', { 
+            state: { email: formData.email } 
+          });
+        } else {
+          // Solo se l'email è verificata consentiamo l'accesso alla dashboard
+          navigate('/dashboard');
+        }
+      } else {
+        setErrors(result.message || 'Login fallito. Controlla le tue credenziali.');
       }
-    } catch (error) {
-      console.error('Login error:', error);
+    } catch (error: any) {
+      // Gestiamo i diversi tipi di errori in modo più specifico
+      if (error.message?.includes('Invalid login credentials')) {
+        setErrors('Credenziali non valide. Controlla email e password.');
+      } else if (error.message?.includes('Email not confirmed') || error.code === 'email_not_confirmed') {
+        // Reindirizza alla pagina di verifica email
+        navigate('/auth/waiting-verification', { 
+          state: { email: formData.email } 
+        });
+      } else {
+        setErrors(error.message || 'Errore durante il login. Riprova più tardi.');
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
   

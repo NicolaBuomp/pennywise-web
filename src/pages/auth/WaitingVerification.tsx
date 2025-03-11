@@ -156,6 +156,9 @@ const WaitingVerification: React.FC = () => {
           <Typography variant="body2" color="text.secondary">
             Non hai ricevuto l'email? Controlla la cartella spam o prova a inviare di nuovo.
           </Typography>
+          <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+            Non potrai accedere all'applicazione finché non verifichi il tuo indirizzo email.
+          </Typography>
         </Box>
       </Paper>
     </Box>

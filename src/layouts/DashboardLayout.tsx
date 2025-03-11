@@ -60,7 +60,7 @@ const DashboardLayout: React.FC = () => {
   const location = useLocation();
   const dispatch = useDispatch<AppDispatch>();
 
-  const { user } = useSelector((state: RootState) => state.auth);
+  const { user, isEmailVerified } = useSelector((state: RootState) => state.auth);
   const { theme: themeMode } = useSelector((state: RootState) => state.ui);
   
   const handleDrawerToggle = (): void => {
@@ -250,7 +250,7 @@ const DashboardLayout: React.FC = () => {
         }}
       >
         <Container maxWidth="lg" sx={{ py: 2 }}>
-          <EmailVerificationBanner />
+          {!isEmailVerified && <EmailVerificationBanner displayMode="once-per-session" />}
           <Outlet />
         </Container>
       </Box>

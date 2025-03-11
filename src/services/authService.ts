@@ -14,75 +14,106 @@ export interface UserData {
  * Servizio per la gestione dell'autenticazione con Supabase
  */
 export const authService = {
-/**
- * Effettua il login con email e password
- * @param email - Email dell'utente
- * @param password - Password dell'utente
- * @returns Dati dell'utente autenticato e stato di verifica email
- */
-login: async (email: string, password: string) => {
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      // Rimuoviamo il blocco email non verificata per consentire l'accesso comunque
-      throw error;
-    }
-    
-    // Determina lo stato di verifica dell'email
-    const isEmailVerified = data.user?.email_confirmed_at !== null;
-    
-    return { ...data, isEmailVerified };
-  } catch (error) {
-    // Propaga l'errore per gestirlo nel thunk
-    throw error;
-  }
-},
-
-/**
- * Invia un'email di verifica all'utente
- * @param email - Email dell'utente (opzionale, usa l'utente corrente se non specificato)
- */
-sendEmailVerification: async (email?: string) => {
-  try {
-    let result;
-    
-    if (email) {
-      // Invia email a un indirizzo specifico
-      result = await supabase.auth.resend({
-        type: 'signup',
-        email: email,
-        options: {
-          // URL assoluto corretto
-          emailRedirectTo: `${window.location.origin}/auth/confirm-email`
-        }
+  /**
+   * Effettua il login con email e password
+   * @param email - Email dell'utente
+   * @param password - Password dell'utente
+   * @returns Dati dell'utente autenticato e stato di verifica email
+   */
+  login: async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-    } else {
-      // Usa l'utente corrente se disponibile
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        throw new Error('Nessun utente attualmente autenticato');
+
+      if (error) {
+        // Se l'errore è dovuto all'email non verificata, dobbiamo gestirlo in modo speciale
+        if (error.message === 'Email not confirmed' || error.code === 'email_not_confirmed') {
+          // Prima otteniamo l'utente attraverso l'autenticazione con la password
+          // In questo caso specifico, ignoriamo l'errore di email non verificata
+          console.log("Email non verificata, tentativo di login comunque...");
+          
+          // Utilizziamo un metodo alternativo per ottenere l'utente
+          // Prima verifichiamo le credenziali senza applicare la restrizione di email verificata
+          const { data: userData, error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+            options: {
+              // Tentativo di bypassare la verifica dell'email (potrebbe non funzionare su tutte le istanze Supabase)
+              // emailRedirectTo: `${window.location.origin}/auth/confirm-email`
+            }
+          });
+          
+          // Se le credenziali sono corrette ma l'email non è verificata
+          if (signInError && (signInError.message === 'Email not confirmed' || signInError.code === 'email_not_confirmed')) {
+            // Restituiamo comunque i dati dell'utente con flag isEmailVerified impostato a false
+            return { 
+              user: { email, id: '' },  // Dati utente parziali
+              session: null,
+              isEmailVerified: false,
+              needsEmailVerification: true
+            };
+          } else {
+            // Se c'è un altro errore, lo rilanciamo
+            throw signInError || new Error('Credenziali non valide');
+          }
+        }
+        
+        // Per qualsiasi altro errore, lo propaga
+        throw error;
       }
       
-      result = await supabase.auth.resend({
-        type: 'signup',
-        email: sessionData.session.user.email || '',
-        options: {
-          // URL assoluto corretto
-          emailRedirectTo: `${window.location.origin}/auth/confirm-email`
-        }
-      });
+      // Determina lo stato di verifica dell'email
+      const isEmailVerified = data.user?.email_confirmed_at !== null;
+      
+      return { ...data, isEmailVerified };
+    } catch (error) {
+      // Propaga l'errore per gestirlo nel thunk
+      throw error;
     }
-    
-    if (result.error) throw result.error;
-    return result.data;
-  } catch (error) {
-    throw error;
-  }
-},
+  },
+
+  /**
+   * Invia un'email di verifica all'utente
+   * @param email - Email dell'utente (opzionale, usa l'utente corrente se non specificato)
+   * @returns Promise con il risultato dell'invio dell'email
+   */
+  sendEmailVerification: async (email?: string) => {
+    try {
+      let result;
+      
+      if (email) {
+        // Invia email a un indirizzo specifico
+        result = await supabase.auth.resend({
+          type: 'signup',
+          email: email,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/confirm-email`
+          }
+        });
+      } else {
+        // Usa l'utente corrente se disponibile
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData.session) {
+          throw new Error('Nessun utente attualmente autenticato');
+        }
+        
+        result = await supabase.auth.resend({
+          type: 'signup',
+          email: sessionData.session.user.email || '',
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/confirm-email`
+          }
+        });
+      }
+      
+      if (result.error) throw result.error;
+      return result.data;
+    } catch (error) {
+      throw error;
+    }
+  },
 
   /**
    * Effettua il login con provider OAuth (Google, Apple)
@@ -109,6 +140,7 @@ sendEmailVerification: async (email?: string) => {
    * @returns Dati dell'utente registrato
    */
   register: async (email: string, password: string, userData: UserData = {}) => {
+    // Prima registrazione con auth
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -120,7 +152,6 @@ sendEmailVerification: async (email?: string) => {
           default_currency: userData.defaultCurrency || 'EUR',
           language: userData.language || 'it',
         },
-        // Fix per il redirectTo - assicuriamoci che sia un URL assoluto corretto
         emailRedirectTo: `${window.location.origin}/auth/confirm-email`,
       },
     });
@@ -175,7 +206,7 @@ sendEmailVerification: async (email?: string) => {
       .select('*')
       .eq('id', data.user.id)
       .single();
-      
+    
     console.log("authService.getCurrentUser -> DB userData:", userData); // log per debug
       
     if (error) {
@@ -246,8 +277,55 @@ sendEmailVerification: async (email?: string) => {
       .single();
 
     if (profileError) throw profileError;
-    
     return profileData as User;
+  },
+
+  /**
+   * Sincronizza manualmente l'utente dalla tabella auth.users a public.users
+   * @param userId - ID dell'utente da sincronizzare
+   */
+  syncUserToDatabase: async (userId?: string) => {
+    try {
+      // Se non viene fornito l'ID, usa l'utente corrente
+      if (!userId) {
+        const { data } = await supabase.auth.getUser();
+        if (!data.user) return null;
+        userId = data.user.id;
+      }
+
+      // Ottieni i dati dell'utente da auth
+      const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId);
+      
+      if (authError || !authUser) {
+        console.error("Error fetching auth user:", authError);
+        return null;
+      }
+      
+      // Inserisci o aggiorna l'utente nella tabella users
+      const { data: dbUser, error: dbError } = await supabase
+        .from('users')
+        .upsert({
+          id: authUser.user.id,
+          email: authUser.user.email,
+          username: authUser.user.user_metadata.username || authUser.user.email?.split('@')[0],
+          display_name: authUser.user.user_metadata.display_name || authUser.user.user_metadata.username || authUser.user.email?.split('@')[0],
+          phone_number: authUser.user.user_metadata.phone_number || null,
+          default_currency: authUser.user.user_metadata.default_currency || 'EUR',
+          language: authUser.user.user_metadata.language || 'it',
+        }, { onConflict: 'id' })
+        .select()
+        .single();
+      
+      if (dbError) {
+        console.error("Error syncing user to database:", dbError);
+        return null;
+      }
+      
+      return dbUser;
+    } catch (error) {
+      console.error("Error in syncUserToDatabase:", error);
+      return null;
+    }
   },
 };
 

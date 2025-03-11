@@ -22,23 +22,58 @@ import authService, { UserData } from '../../services/authService';
 import { addAlert } from '../slices/uiSlice';
 import supabase from '@/supabaseClient';
 
+// Tracciamo l'ultimo invio dell'email per gestire il rate limit a livello globale
+let lastEmailVerificationSent = 0;
+
 /**
  * Thunk per il login utente con email e password
  */
 export const login = (email: string, password: string) => async (dispatch: AppDispatch) => {
   dispatch(loginStart());
   try {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error) throw error;
+    // Utilizziamo il service che ora gestisce anche il caso di email non verificata
+    const result = await authService.login(email, password);
     
+    if (result.needsEmailVerification) {
+      // Se siamo qui, l'utente ha credenziali valide ma l'email non è verificata
+      // Invece di bloccare il login, mostriamo un avviso e consentiamo l'accesso limitato
+      
+      // Poiché non abbiamo una sessione valida, dobbiamo creare dati utente temporanei
+      const tempUser: User = {
+        id: '',
+        email: email,
+        username: email.split('@')[0],
+        // altri campi possono rimanere undefined
+      };
+      
+      dispatch(loginSuccess({ user: tempUser, isEmailVerified: false }));
+      
+      dispatch(addAlert({
+        type: 'warning',
+        message: 'Email non verificata. Verifica la tua email entro 48 ore dalla registrazione per evitare limitazioni.',
+        autoHideDuration: 10000,
+      }));
+      
+      // Inviamo automaticamente una nuova email di verifica
+      await dispatch(sendEmailVerification(email));
+      
+      return {
+        success: true,
+        isEmailVerified: false,
+        user: tempUser,
+        needsEmailVerification: true
+      };
+    }
+
+    // Caso normale: login riuscito e abbiamo i dati utente
     const userData = await authService.getCurrentUser();
-    const isEmailVerified = !!data.user.email_confirmed_at;
+    const isEmailVerified = !!result.user?.email_confirmed_at;
     
-    // Mostra un alert di warning, ma non bloccare il login
+    // Avviso se l'email non è verificata
     if (!isEmailVerified) {
       dispatch(addAlert({
         type: 'warning',
-        message: 'Verifica la tua email per accedere a tutte le funzionalità.',
+        message: 'Verifica la tua email entro 48 ore dalla registrazione per evitare limitazioni.',
         autoHideDuration: 10000,
       }));
     }
@@ -95,7 +130,11 @@ export const register = (email: string, password: string, userData: UserData) =>
     
     // Imposta lo stato di autenticazione in Redux
     dispatch(registerSuccess({
-      user: userProfile || { id: '', email: email, username: userData.username || '' },
+      user: userProfile || { 
+        id: data.user?.id || '',
+        email: email, 
+        username: userData.username || email.split('@')[0] 
+      },
       isEmailVerified: data.isEmailVerified || false
     }));
     
@@ -104,7 +143,7 @@ export const register = (email: string, password: string, userData: UserData) =>
       success: true,
       requiresEmailVerification: !data.isEmailVerified,
       email: email,
-      user: userProfile
+      user: userProfile || data.user
     };
   } catch (error: any) {
     dispatch(registerFailure((error as Error).message));
@@ -132,19 +171,45 @@ export const checkEmailVerification = () => async (dispatch: AppDispatch) => {
  */
 export const sendEmailVerification = (email?: string) => async (dispatch: AppDispatch) => {
   try {
+    // Controllo rate limit semplificato (60 secondi)
+    const now = Date.now();
+    const timeSinceLastEmail = now - lastEmailVerificationSent;
+    
+    if (timeSinceLastEmail < 60000) { // 60 secondi in millisecondi
+      const remainingSeconds = Math.ceil((60000 - timeSinceLastEmail) / 1000);
+      
+      dispatch(addAlert({
+        type: 'warning',
+        message: `Per motivi di sicurezza, attendi ${remainingSeconds} secondi prima di inviare un'altra email.`,
+        autoHideDuration: 6000,
+      }));
+      
+      return false;
+    }
+    
     await authService.sendEmailVerification(email);
+    lastEmailVerificationSent = now;
+    
     dispatch(addAlert({
       type: 'success',
       message: 'Email di verifica inviata. Controlla la tua casella di posta.',
       autoHideDuration: 6000,
     }));
     return true;
-  } catch (error) {
-    dispatch(addAlert({
-      type: 'error',
-      message: `Impossibile inviare l'email di verifica: ${(error as Error).message}`,
-      autoHideDuration: 6000,
-    }));
+  } catch (error: any) {
+    if (error.code === 'over_email_send_rate_limit') {
+      dispatch(addAlert({
+        type: 'warning',
+        message: "Per motivi di sicurezza, devi attendere prima di inviare un'altra email di verifica.",
+        autoHideDuration: 10000,
+      }));
+    } else {
+      dispatch(addAlert({
+        type: 'error',
+        message: `Impossibile inviare l'email di verifica: ${(error as Error).message}`,
+        autoHideDuration: 6000,
+      }));
+    }
     return false;
   }
 };
@@ -177,17 +242,18 @@ export const checkAuthState = () => async (dispatch: AppDispatch) => {
     if (session) {
       // La sessione esiste, ottieni i dati utente dal db Supabase
       const userData = await authService.getCurrentUser();
-      dispatch(checkAuthSuccess(userData));
       
       // Verifica esplicita dello stato dell'email
       const isVerified = !!session.user.email_confirmed_at;
       console.log("checkAuthState -> email verification status:", isVerified); // log per debug
+      
+      dispatch(checkAuthSuccess(userData));
       dispatch(setEmailVerified(isVerified));
       
       if (!isVerified) {
         dispatch(addAlert({
           type: 'warning',
-          message: 'Verifica il tuo indirizzo email per sbloccare tutte le funzionalità.',
+          message: 'Verifica il tuo indirizzo email per accedere all\'applicazione.',
           autoHideDuration: 10000,
         }));
       }

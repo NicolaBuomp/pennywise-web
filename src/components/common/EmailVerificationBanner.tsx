@@ -54,11 +54,13 @@ const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = ({
     <Collapse in={open}>
       <Alert
         severity="warning"
+        variant="filled"
         action={
           <Stack direction="row" spacing={1}>
             <Button
               color="inherit"
               size="small"
+              variant="outlined"
               onClick={handleSendVerificationEmail}
               disabled={sending}
             >
@@ -76,7 +78,7 @@ const EmailVerificationBanner: React.FC<EmailVerificationBannerProps> = ({
         }
         sx={{ mb: 2 }}
       >
-        Verifica il tuo indirizzo email per sbloccare tutte le funzionalità dell'app. 
+        <strong>Importante:</strong> Verifica il tuo indirizzo email entro 48 ore dalla registrazione per evitare limitazioni. 
         Controlla la tua casella di posta e clicca sul link di conferma.
       </Alert>
     </Collapse>
