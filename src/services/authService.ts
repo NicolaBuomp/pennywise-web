@@ -3,8 +3,8 @@ import supabase from '../supabaseClient';
 
 // Interfaccia per i dati aggiuntivi dell'utente durante la registrazione
 export interface UserData {
-  username?: string;
-  displayName?: string;
+  firstName?: string;
+  lastName?: string;
   phoneNumber?: string | null;
   defaultCurrency?: string;
   language?: string;
@@ -146,8 +146,8 @@ export const authService = {
       password,
       options: {
         data: {
-          username: userData.username || email.split('@')[0],
-          display_name: userData.displayName || userData.username || email.split('@')[0],
+          first_name: userData.firstName || '',
+          last_name: userData.lastName || '',
           phone_number: userData.phoneNumber || null,
           default_currency: userData.defaultCurrency || 'EUR',
           language: userData.language || 'it',
@@ -200,9 +200,8 @@ export const authService = {
     console.log("authService.getCurrentUser -> getUser:", data.user); // log per debug
     if (!data.user) return null;
     
-    // Recupera i dati completi dell'utente dal db
     const { data: userData, error } = await supabase
-      .from('users')
+      .from('profiles')
       .select('*')
       .eq('id', data.user.id)
       .single();
@@ -261,9 +260,9 @@ export const authService = {
 
     if (authError) throw authError;
 
-    // Aggiorna i dati nella tabella users
+    // Aggiorna i dati nella tabella 'profiles'
     const { data: profileData, error: profileError } = await supabase
-      .from('users')
+      .from('profiles')
       .update({
         display_name: userData.display_name,
         username: userData.username,
@@ -293,12 +292,21 @@ export const authService = {
         userId = data.user.id;
       }
 
-      // Ottieni i dati dell'utente da auth
-      const { data: authUser, error: authError } = await supabase.auth.admin.getUserById(userId);
-      
-      if (authError || !authUser) {
-        console.error("Error fetching auth user:", authError);
-        return null;
+      // Per gli ambienti senza accesso a admin.getUserById, usa i dati utente correnti
+      let authUser;
+      try {
+        // Prima prova con l'API admin se disponibile
+        const { data, error } = await supabase.auth.admin.getUserById(userId);
+        if (error) throw error;
+        authUser = data;
+      } catch (error) {
+        console.log("Admin API not available, falling back to current user data");
+        // Fallback se admin API non è disponibile
+        const { data } = await supabase.auth.getUser();
+        if (!data.user || data.user.id !== userId) {
+          throw new Error("Cannot sync user: current user doesn't match requested ID");
+        }
+        authUser = { user: data.user };
       }
       
       // Inserisci o aggiorna l'utente nella tabella users
@@ -307,11 +315,11 @@ export const authService = {
         .upsert({
           id: authUser.user.id,
           email: authUser.user.email,
-          username: authUser.user.user_metadata.username || authUser.user.email?.split('@')[0],
-          display_name: authUser.user.user_metadata.display_name || authUser.user.user_metadata.username || authUser.user.email?.split('@')[0],
-          phone_number: authUser.user.user_metadata.phone_number || null,
-          default_currency: authUser.user.user_metadata.default_currency || 'EUR',
-          language: authUser.user.user_metadata.language || 'it',
+          username: authUser.user.user_metadata?.username || authUser.user.email?.split('@')[0],
+          display_name: authUser.user.user_metadata?.display_name || authUser.user.user_metadata?.username || authUser.user.email?.split('@')[0],
+          phone_number: authUser.user.user_metadata?.phone_number || null,
+          default_currency: authUser.user.user_metadata?.default_currency || 'EUR',
+          language: authUser.user.user_metadata?.language || 'it',
         }, { onConflict: 'id' })
         .select()
         .single();

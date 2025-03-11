@@ -32,7 +32,7 @@ export const expenseService = {
           settled_at,
           user:users!expense_shares_user_id_fkey(id, username, display_name, avatar_url)
         )
-      `)
+      `, { count: 'exact' })
       .eq('group_id', groupId)
       .order(orderBy.column, { ascending: orderBy.order === 'asc' })
       .range((page - 1) * limit, page * limit - 1);

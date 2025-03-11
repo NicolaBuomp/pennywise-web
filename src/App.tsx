@@ -1,4 +1,3 @@
-// App.tsx
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -31,14 +30,18 @@ import AlertManager from './components/common/AlertManager';
 
 const App: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { isLoading, isAuthenticated, isEmailVerified } = useSelector((state: RootState) => state.auth);
+  const { isInitialLoading, isAuthenticated, isEmailVerified } = useSelector((state: RootState) => state.auth);
   const { theme: themeMode } = useSelector((state: RootState) => state.ui);
 
+  // Crea un tema derivato con il corretto mode (light/dark)
   const theme = React.useMemo(() => {
+    // Verifica se baseTheme.palette esiste prima di usarlo
+    const paletteBase = baseTheme?.palette || {};
+    
     return createTheme({
-      ...baseTheme,
+      ...(baseTheme || {}),
       palette: {
-        ...baseTheme.palette,
+        ...paletteBase,
         mode: themeMode,
       },
     });
@@ -48,7 +51,7 @@ const App: React.FC = () => {
     dispatch(checkAuthState());
   }, [dispatch]);
 
-  if (isLoading) {
+  if (isInitialLoading) {
     return <LoadingScreen />;
   }
 

@@ -46,6 +46,9 @@ const theme: ThemeOptions = createTheme({
           '&:hover .MuiOutlinedInput-notchedOutline': {
             borderColor: 'rgba(0, 0, 0, 0.3)',
           },
+          '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: palette.primary.main,
+          },
         },
       },
     },

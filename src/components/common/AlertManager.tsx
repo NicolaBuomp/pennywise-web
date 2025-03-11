@@ -41,7 +41,7 @@ const AlertManager: React.FC = () => {
         <Snackbar
           key={alert.id}
           open={true}
-          autoHideDuration={alert.autoHideDuration}
+          autoHideDuration={alert.autoHideDuration || 5000}
           onClose={(event, reason) => handleAutoClose(event, reason, alert.id)}
           anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
           sx={{ mt: 8, mr: 2 }} // Per evitare sovrapposizioni con AppBar

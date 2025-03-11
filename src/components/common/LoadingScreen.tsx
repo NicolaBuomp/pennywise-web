@@ -1,11 +1,7 @@
 import React from 'react';
 import { Box, CircularProgress, Typography } from '@mui/material';
 
-interface LoadingScreenProps {
-  message?: string;
-}
-
-const LoadingScreen: React.FC<LoadingScreenProps> = ({ message = 'Caricamento...' }) => {
+const LoadingScreen: React.FC = () => {
   return (
     <Box
       sx={{
@@ -14,13 +10,12 @@ const LoadingScreen: React.FC<LoadingScreenProps> = ({ message = 'Caricamento...
         alignItems: 'center',
         justifyContent: 'center',
         height: '100vh',
-        width: '100vw',
-        bgcolor: 'background.default',
+        width: '100%',
       }}
     >
-      <CircularProgress size={60} color="primary" />
-      <Typography variant="h6" sx={{ mt: 3 }}>
-        {message}
+      <CircularProgress size={60} sx={{ mb: 2 }} />
+      <Typography variant="h6" color="text.secondary">
+        Caricamento...
       </Typography>
     </Box>
   );

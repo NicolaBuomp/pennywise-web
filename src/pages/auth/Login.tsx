@@ -38,7 +38,7 @@ interface FormErrors {
 const Login: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { isLoading, error } = useSelector((state: RootState) => state.auth);
+  const { error } = useSelector((state: RootState) => state.auth);
   
   const [formData, setFormData] = useState<FormData>({
     email: 'vilawap947@makroyal.com',
@@ -56,8 +56,6 @@ const Login: React.FC = () => {
       ...formData,
       [name]: value,
     });
-    
-    // Reset errore specifico quando l'utente inizia a digitare
     if (formErrors[name as keyof FormErrors]) {
       setFormErrors({
         ...formErrors,
@@ -68,26 +66,20 @@ const Login: React.FC = () => {
   
   const validateForm = (): boolean => {
     const errors: FormErrors = {};
-    
-    // Validazione email
     if (!formData.email) {
       errors.email = 'L\'email è obbligatoria';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = 'Email non valida';
     }
-    
-    // Validazione password
     if (!formData.password) {
       errors.password = 'La password è obbligatoria';
     }
-    
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
   
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
     
     setSubmitting(true);
@@ -234,9 +226,8 @@ const Login: React.FC = () => {
             fullWidth
             variant="contained"
             sx={{ mt: 3 }}
-            disabled={isLoading}
           >
-            {isLoading ? <CircularProgress size={24} /> : 'Accedi'}
+            { 'Accedi'}
           </Button>
           
           <Box sx={{ mt: 3, mb: 2 }}>
@@ -253,7 +244,6 @@ const Login: React.FC = () => {
               variant="outlined"
               startIcon={<GoogleIcon />}
               onClick={handleGoogleLogin}
-              disabled={isLoading}
             >
               Google
             </Button>
@@ -262,7 +252,6 @@ const Login: React.FC = () => {
               variant="outlined"
               startIcon={<AppleIcon />}
               onClick={handleAppleLogin}
-              disabled={isLoading}
             >
               Apple
             </Button>

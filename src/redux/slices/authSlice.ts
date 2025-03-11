@@ -17,15 +17,17 @@ interface AuthState {
   user: User | null;
   isAuthenticated: boolean;
   isEmailVerified: boolean;
-  isLoading: boolean;
+  isInitialLoading: boolean;  // Loading globale iniziale (checkAuth)
+  isLoading: boolean;         // Loading per operazioni (login, register, etc.)
   error: string | null;
 }
 
 const initialState: AuthState = {
   user: null,
   isAuthenticated: false,
-  isEmailVerified: false, // Questo dovrebbe già essere false, ma lo ribadiamo
-  isLoading: true,
+  isEmailVerified: false,
+  isInitialLoading: true,
+  isLoading: false,
   error: null,
 };
 
@@ -38,7 +40,7 @@ export const authSlice = createSlice({
       state.isLoading = true;
       state.error = null;
     },
-    loginSuccess: (state, action: PayloadAction<{user: User, isEmailVerified: boolean}>) => {
+    loginSuccess: (state, action: PayloadAction<{ user: User; isEmailVerified: boolean }>) => {
       state.isLoading = false;
       state.isAuthenticated = true;
       state.user = action.payload.user;
@@ -52,13 +54,12 @@ export const authSlice = createSlice({
       state.isEmailVerified = false;
       state.error = action.payload;
     },
-    
     // Gestione della registrazione
     registerStart: (state) => {
       state.isLoading = true;
       state.error = null;
     },
-    registerSuccess: (state, action: PayloadAction<{user: User, isEmailVerified: boolean}>) => {
+    registerSuccess: (state, action: PayloadAction<{ user: User; isEmailVerified: boolean }>) => {
       state.isLoading = false;
       state.isAuthenticated = true;
       state.user = action.payload.user;
@@ -69,12 +70,10 @@ export const authSlice = createSlice({
       state.isLoading = false;
       state.error = action.payload;
     },
-    
     // Aggiornamento dello stato di verifica dell'email
     setEmailVerified: (state, action: PayloadAction<boolean>) => {
       state.isEmailVerified = action.payload;
     },
-    
     // Gestione del logout
     logoutStart: (state) => {
       state.isLoading = true;
@@ -90,26 +89,21 @@ export const authSlice = createSlice({
       state.isLoading = false;
       state.error = action.payload;
     },
-    
-    // Verifica dello stato di autenticazione
+    // Verifica dello stato di autenticazione (loading globale)
     checkAuthStart: (state) => {
-      state.isLoading = true;
+      state.isInitialLoading = true;
     },
     checkAuthSuccess: (state, action: PayloadAction<User | null>) => {
-      state.isLoading = false;
+      state.isInitialLoading = false;
       state.isAuthenticated = !!action.payload;
       state.user = action.payload;
-      // Rimuoviamo l'assegnazione automatica di isEmailVerified qui
-      // state.isEmailVerified = !!action.payload; <- Rimuovi o commenta questa linea
-      // Lo stato di verifica dell'email sarà impostato dalla funzione checkEmailVerification
     },
     checkAuthFailure: (state) => {
-      state.isLoading = false;
+      state.isInitialLoading = false;
       state.isAuthenticated = false;
       state.user = null;
       state.isEmailVerified = false;
     },
-    
     // Aggiornamento del profilo utente
     updateProfileStart: (state) => {
       state.isLoading = true;
@@ -129,8 +123,7 @@ export const authSlice = createSlice({
       state.isLoading = false;
       state.error = action.payload;
     },
-    
-    // Reset dello stato degli errori
+    // Reset degli errori
     clearErrors: (state) => {
       state.error = null;
     },
@@ -157,11 +150,11 @@ export const {
   clearErrors,
 } = authSlice.actions;
 
-// Selettori
 export const selectUser = (state: { auth: AuthState }) => state.auth.user;
 export const selectIsAuthenticated = (state: { auth: AuthState }) => state.auth.isAuthenticated;
 export const selectIsEmailVerified = (state: { auth: AuthState }) => state.auth.isEmailVerified;
 export const selectIsLoading = (state: { auth: AuthState }) => state.auth.isLoading;
+export const selectIsInitialLoading = (state: { auth: AuthState }) => state.auth.isInitialLoading;
 export const selectAuthError = (state: { auth: AuthState }) => state.auth.error;
 
 export default authSlice.reducer;
