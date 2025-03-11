@@ -1,10 +1,9 @@
-// src/components/layout/AppLayout.tsx
 import React from 'react';
 import { Box, AppBar, Toolbar, Typography, IconButton, Container, useTheme, Drawer, List, ListItem, ListItemText, ListItemButton, ListItemIcon, Divider } from '@mui/material';
 import { useSelector } from 'react-redux';
-import { selectUser } from '../../store/slices/authSlice';
 import ThemeSwitcher from './themeSwitcher';
 import { Link, useLocation } from 'react-router-dom';
+import { selectUser } from '@/redux/slices/authSlice';
 
 // Elementi del menu principale
 const MENU_ITEMS = [
@@ -123,7 +122,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
                   }
                 }}
               >
-                {user?.user_metadata?.first_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                {user?.display_name?.charAt(0) || user?.email?.charAt(0) || 'U'}
               </IconButton>
             </Box>
           )}
@@ -179,7 +178,7 @@ const AppLayout: React.FC<AppLayoutProps> = ({ children }) => {
             <Divider sx={{ mt: 2, mb: 2 }} />
             <Box sx={{ px: 2, pb: 2 }}>
               <Typography variant="caption" color="text.secondary">
-                © {new Date().getFullYear()} PennyWise
+                © {new Date().getFullYear()} Pennywise
               </Typography>
             </Box>
           </Box>

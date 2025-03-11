@@ -3,8 +3,8 @@ import supabase from '../supabaseClient';
 
 // Interfaccia per i dati aggiuntivi dell'utente durante la registrazione
 export interface UserData {
-  username?: string;
-  displayName?: string;
+  firstName?: string;
+  lastName?: string;
   phoneNumber?: string | null;
   defaultCurrency?: string;
   language?: string;
@@ -14,75 +14,75 @@ export interface UserData {
  * Servizio per la gestione dell'autenticazione con Supabase
  */
 export const authService = {
-/**
- * Effettua il login con email e password
- * @param email - Email dell'utente
- * @param password - Password dell'utente
- * @returns Dati dell'utente autenticato e stato di verifica email
- */
-login: async (email: string, password: string) => {
-  try {
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (error) {
-      // Rimuoviamo il blocco email non verificata per consentire l'accesso comunque
-      throw error;
-    }
-    
-    // Determina lo stato di verifica dell'email
-    const isEmailVerified = data.user?.email_confirmed_at !== null;
-    
-    return { ...data, isEmailVerified };
-  } catch (error) {
-    // Propaga l'errore per gestirlo nel thunk
-    throw error;
-  }
-},
-
-/**
- * Invia un'email di verifica all'utente
- * @param email - Email dell'utente (opzionale, usa l'utente corrente se non specificato)
- */
-sendEmailVerification: async (email?: string) => {
-  try {
-    let result;
-    
-    if (email) {
-      // Invia email a un indirizzo specifico
-      result = await supabase.auth.resend({
-        type: 'signup',
-        email: email,
-        options: {
-          // URL assoluto corretto
-          emailRedirectTo: `${window.location.origin}/auth/confirm-email`
-        }
+  /**
+   * Effettua il login con email e password
+   * @param email - Email dell'utente
+   * @param password - Password dell'utente
+   * @returns Dati dell'utente autenticato e stato di verifica email
+   */
+  login: async (email: string, password: string) => {
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
       });
-    } else {
-      // Usa l'utente corrente se disponibile
-      const { data: sessionData } = await supabase.auth.getSession();
-      if (!sessionData.session) {
-        throw new Error('Nessun utente attualmente autenticato');
+
+      if (error) {
+        // Rimuoviamo il blocco email non verificata per consentire l'accesso comunque
+        throw error;
       }
       
-      result = await supabase.auth.resend({
-        type: 'signup',
-        email: sessionData.session.user.email || '',
-        options: {
-          // URL assoluto corretto
-          emailRedirectTo: `${window.location.origin}/auth/confirm-email`
-        }
-      });
+      // Determina lo stato di verifica dell'email
+      const isEmailVerified = data.user?.email_confirmed_at !== null;
+      
+      return { ...data, isEmailVerified };
+    } catch (error) {
+      // Propaga l'errore per gestirlo nel thunk
+      throw error;
     }
-    
-    if (result.error) throw result.error;
-    return result.data;
-  } catch (error) {
-    throw error;
-  }
-},
+  },
+
+  /**
+   * Invia un'email di verifica all'utente
+   * @param email - Email dell'utente (opzionale, usa l'utente corrente se non specificato)
+   */
+  sendEmailVerification: async (email?: string) => {
+    try {
+      let result;
+      
+      if (email) {
+        // Invia email a un indirizzo specifico
+        result = await supabase.auth.resend({
+          type: 'signup',
+          email: email,
+          options: {
+            // URL assoluto corretto
+            emailRedirectTo: `${window.location.origin}/auth/confirm-email`
+          }
+        });
+      } else {
+        // Usa l'utente corrente se disponibile
+        const { data: sessionData } = await supabase.auth.getSession();
+        if (!sessionData.session) {
+          throw new Error('Nessun utente attualmente autenticato');
+        }
+        
+        result = await supabase.auth.resend({
+          type: 'signup',
+          email: sessionData.session.user.email || '',
+          options: {
+            // URL assoluto corretto
+            emailRedirectTo: `${window.location.origin}/auth/confirm-email`
+          }
+        });
+      }
+      
+      if (result.error) throw result.error;
+      return result.data;
+    } catch (error) {
+      throw error;
+    }
+  },
 
   /**
    * Effettua il login con provider OAuth (Google, Apple)
@@ -114,8 +114,8 @@ sendEmailVerification: async (email?: string) => {
       password,
       options: {
         data: {
-          username: userData.username || email.split('@')[0],
-          display_name: userData.displayName || userData.username || email.split('@')[0],
+          first_name: userData.firstName || '',
+          last_name: userData.lastName || '',
           phone_number: userData.phoneNumber || null,
           default_currency: userData.defaultCurrency || 'EUR',
           language: userData.language || 'it',
@@ -169,14 +169,13 @@ sendEmailVerification: async (email?: string) => {
     console.log("authService.getCurrentUser -> getUser:", data.user); // log per debug
     if (!data.user) return null;
     
-    // Recupera i dati completi dell'utente dal db
     const { data: userData, error } = await supabase
-      .from('users')
+      .from('profiles')
       .select('*')
       .eq('id', data.user.id)
       .single();
       
-    console.log("authService.getCurrentUser -> DB userData:", userData); // log per debug
+    console.log("authService.getCurrentUser -> DB userData:", userData);
       
     if (error) {
       console.error("Error fetching user data from DB:", error);
@@ -230,9 +229,9 @@ sendEmailVerification: async (email?: string) => {
 
     if (authError) throw authError;
 
-    // Aggiorna i dati nella tabella users
+    // Aggiorna i dati nella tabella 'profiles'
     const { data: profileData, error: profileError } = await supabase
-      .from('users')
+      .from('profiles')
       .update({
         display_name: userData.display_name,
         username: userData.username,

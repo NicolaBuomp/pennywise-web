@@ -26,7 +26,8 @@ import { register, loginWithProvider } from '../../redux/thunks/authThunks';
 import { AppDispatch, RootState } from '../../redux/store';
 
 interface FormData {
-  displayName: string;
+  firstName: string;
+  lastName: string;
   phoneNumber: string;
   email: string;
   password: string;
@@ -34,7 +35,8 @@ interface FormData {
 }
 
 interface FormErrors {
-  displayName?: string;
+  firstName: string;
+  lastName: string;
   phoneNumber?: string;
   email?: string;
   password?: string;
@@ -44,27 +46,27 @@ interface FormErrors {
 const Register: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { isLoading, error } = useSelector((state: RootState) => state.auth);
-  
-  const [formData, setFormData] = useState<FormData>({
-    displayName: '',
+  const { error } = useSelector((state: RootState) => state.auth);
+
+  const [formData, setFormData] = useState<FormData>({});
+
+  const [showPassword, setShowPassword] = useState<boolean>(false);
+  const [formErrors, setFormErrors] = useState<FormErrors>({
+    firstName: '',
+    lastName: '',
     phoneNumber: '',
     email: '',
     password: '',
-    confirmPassword: '',
+    confirmPassword: ''
   });
-  
-  const [showPassword, setShowPassword] = useState<boolean>(false);
-  const [formErrors, setFormErrors] = useState<FormErrors>({});
-  
+  const [buttonLoading, setButtonLoading] = useState(false);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
       [name]: value,
     });
-    
-    // Reset errore specifico quando l'utente inizia a digitare
     if (formErrors[name as keyof FormErrors]) {
       setFormErrors({
         ...formErrors,
@@ -72,62 +74,61 @@ const Register: React.FC = () => {
       });
     }
   };
-  
+
   const validateForm = (): boolean => {
-    const errors: FormErrors = {};
-    
-    // Validazione display name
-    if (!formData.displayName) {
-      errors.displayName = 'Il nome visualizzato è obbligatorio';
+    const errors: FormErrors = {
+    };
+    if (!formData.firstName) {
+      errors.firstName = 'Il nome è obbligatorio';
     }
-    
-    // Validazione numero di telefono (opzionale)
+    if (!formData.lastName) {
+      errors.lastName = 'Il cognome è obbligatorio';
+    }
     if (formData.phoneNumber && !/^[+]?[(]?[0-9]{3}[)]?[-\s.]?[0-9]{3}[-\s.]?[0-9]{4,6}$/im.test(formData.phoneNumber)) {
       errors.phoneNumber = 'Formato numero di telefono non valido';
     }
-    
-    // Validazione email
     if (!formData.email) {
       errors.email = 'L\'email è obbligatoria';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = 'Email non valida';
     }
-    
-    // Validazione password
     if (!formData.password) {
       errors.password = 'La password è obbligatoria';
     } else if (formData.password.length < 8) {
       errors.password = 'La password deve contenere almeno 8 caratteri';
     }
-    
-    // Validazione conferma password
     if (formData.password !== formData.confirmPassword) {
       errors.confirmPassword = 'Le password non coincidono';
     }
-    
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
-  
+
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
-    
+    setButtonLoading(true);
     try {
       const userData = {
-        displayName: formData.displayName,
+        firstName: formData.firstName,
+        lastName: formData.lastName,
         phoneNumber: formData.phoneNumber || null,
       };
-      
-      await dispatch(register(formData.email, formData.password, userData));
-      // Indipendentemente dallo stato di verifica, reindirizza in dashboard
-      navigate('/dashboard');
+      const result = await dispatch(register(formData.email, formData.password, userData));
+      if (result.success) {
+        if (result.requiresEmailVerification) {
+          navigate('/auth/waiting-verification');
+        } else {
+          navigate('/dashboard');
+        }
+      }
     } catch (error) {
       // L'errore viene già gestito nel reducer
+    } finally {
+      setButtonLoading(false);
     }
   };
-  
+
   const handleGoogleLogin = async () => {
     try {
       await dispatch(loginWithProvider('google'));
@@ -135,7 +136,7 @@ const Register: React.FC = () => {
       // Errore già gestito nel reducer
     }
   };
-  
+
   const handleAppleLogin = async () => {
     try {
       await dispatch(loginWithProvider('apple'));
@@ -143,11 +144,11 @@ const Register: React.FC = () => {
       // Errore già gestito nel reducer
     }
   };
-  
+
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
-  
+
   return (
     <Box
       sx={{
@@ -158,10 +159,10 @@ const Register: React.FC = () => {
         maxWidth: 450,
       }}
     >
-      <Paper 
-        elevation={3} 
-        sx={{ 
-          p: 4, 
+      <Paper
+        elevation={3}
+        sx={{
+          p: 4,
           width: '100%',
           borderRadius: 2
         }}
@@ -174,29 +175,42 @@ const Register: React.FC = () => {
             Inizia a gestire le tue spese condivise con Pennywise
           </Typography>
         </Box>
-        
+
         {error && (
           <Alert severity="error" sx={{ mb: 3 }}>
             {error}
           </Alert>
         )}
-        
+
         <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
-          
           <TextField
             margin="normal"
             required
             fullWidth
-            id="displayName"
-            label="Nome completo"
-            name="displayName"
+            id="firstName"
+            label="Nome"
+            name="firstName"
             autoComplete="name"
-            value={formData.displayName}
+            value={formData.firstName}
             onChange={handleChange}
-            error={!!formErrors.displayName}
-            helperText={formErrors.displayName}
+            error={!!formErrors.firstName}
+            helperText={formErrors.firstName}
           />
-          
+
+          <TextField
+            margin="normal"
+            required
+            fullWidth
+            id="lastName"
+            label="Cognome"
+            name="lastName"
+            autoComplete="name"
+            value={formData.lastName}
+            onChange={handleChange}
+            error={!!formErrors.lastName}
+            helperText={formErrors.lastName}
+          />
+
           <TextField
             margin="normal"
             fullWidth
@@ -209,7 +223,7 @@ const Register: React.FC = () => {
             error={!!formErrors.phoneNumber}
             helperText={formErrors.phoneNumber}
           />
-          
+
           <TextField
             margin="normal"
             required
@@ -223,7 +237,7 @@ const Register: React.FC = () => {
             error={!!formErrors.email}
             helperText={formErrors.email}
           />
-          
+
           <TextField
             margin="normal"
             required
@@ -251,7 +265,7 @@ const Register: React.FC = () => {
               ),
             }}
           />
-          
+
           <TextField
             margin="normal"
             required
@@ -266,17 +280,17 @@ const Register: React.FC = () => {
             error={!!formErrors.confirmPassword}
             helperText={formErrors.confirmPassword}
           />
-          
+
           <Button
             type="submit"
             fullWidth
             variant="contained"
             sx={{ mt: 3 }}
-            disabled={isLoading}
+            disabled={buttonLoading}
           >
-            {isLoading ? <CircularProgress size={24} /> : 'Registrati'}
+            {buttonLoading ? <CircularProgress size={24} /> : 'Registrati'}
           </Button>
-          
+
           <Box sx={{ mt: 3, mb: 2 }}>
             <Divider>
               <Typography variant="body2" color="text.secondary">
@@ -284,14 +298,14 @@ const Register: React.FC = () => {
               </Typography>
             </Divider>
           </Box>
-          
+
           <Stack direction="row" spacing={2}>
             <Button
               fullWidth
               variant="outlined"
               startIcon={<GoogleIcon />}
               onClick={handleGoogleLogin}
-              disabled={isLoading}
+              disabled={buttonLoading}
             >
               Google
             </Button>
@@ -300,12 +314,12 @@ const Register: React.FC = () => {
               variant="outlined"
               startIcon={<AppleIcon />}
               onClick={handleAppleLogin}
-              disabled={isLoading}
+              disabled={buttonLoading}
             >
               Apple
             </Button>
           </Stack>
-          
+
           <Box sx={{ mt: 3, textAlign: 'center' }}>
             <Typography variant="body2">
               Hai già un account?{' '}

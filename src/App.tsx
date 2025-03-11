@@ -1,4 +1,3 @@
-// App.tsx
 import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
@@ -31,7 +30,7 @@ import AlertManager from './components/common/AlertManager';
 
 const App: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
-  const { isLoading, isAuthenticated, isEmailVerified } = useSelector((state: RootState) => state.auth);
+  const { isInitialLoading, isAuthenticated, isEmailVerified } = useSelector((state: RootState) => state.auth);
   const { theme: themeMode } = useSelector((state: RootState) => state.ui);
 
   const theme = React.useMemo(() => {
@@ -48,7 +47,7 @@ const App: React.FC = () => {
     dispatch(checkAuthState());
   }, [dispatch]);
 
-  if (isLoading) {
+  if (isInitialLoading) {
     return <LoadingScreen />;
   }
 
@@ -65,7 +64,15 @@ const App: React.FC = () => {
               <Route path="/auth/confirm-email" element={<ConfirmEmail />} />
               <Route path="/auth/waiting-verification" element={<WaitingVerification />} />
             </Route>
-            <Route element={isAuthenticated ? <DashboardLayout /> : <Navigate to="/login" />}>
+            <Route
+              element={
+                isAuthenticated
+                  ? isEmailVerified
+                    ? <DashboardLayout />
+                    : <Navigate to="/auth/waiting-verification" />
+                  : <Navigate to="/login" />
+              }
+            >
               <Route path="/" element={<Navigate to="/dashboard" />} />
               <Route path="/dashboard" element={<Dashboard />} />
             </Route>

@@ -7,7 +7,7 @@ import { CheckCircleOutline, ErrorOutline } from '@mui/icons-material';
 import { AppDispatch } from '../../redux/store';
 import { setEmailVerified } from '../../redux/slices/authSlice';
 import supabase from '../../supabaseClient';
-import { logout } from '../../redux/thunks/authThunks';
+import { checkEmailVerification } from '../../redux/thunks/authThunks';
 
 const ConfirmEmail: React.FC = () => {
   const [searchParams] = useSearchParams();
@@ -21,9 +21,14 @@ const ConfirmEmail: React.FC = () => {
   useEffect(() => {
     const verifyEmail = async () => {
       try {
-        if (error) throw error;
-        dispatch(setEmailVerified(true));
-        setSuccess(true);
+        // Actually check with Supabase if the email is verified
+        const isVerified = await dispatch(checkEmailVerification());
+        
+        if (isVerified) {
+          setSuccess(true);
+        } else {
+          throw new Error("L'email non risulta ancora verificata. Riprova più tardi.");
+        }
       } catch (error: any) {
         setError(error.message || `Errore durante la verifica dell'email`);
       } finally {

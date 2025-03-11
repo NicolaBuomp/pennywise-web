@@ -95,7 +95,7 @@ export const register = (email: string, password: string, userData: UserData) =>
     
     // Imposta lo stato di autenticazione in Redux
     dispatch(registerSuccess({
-      user: userProfile || { id: '', email: email, username: userData.username || '' },
+      user: userProfile || { id: '', email: email },
       isEmailVerified: data.isEmailVerified || false
     }));
     

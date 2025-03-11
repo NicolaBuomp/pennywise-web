@@ -38,7 +38,7 @@ interface FormErrors {
 const Login: React.FC = () => {
   const dispatch = useDispatch<AppDispatch>();
   const navigate = useNavigate();
-  const { isLoading, error } = useSelector((state: RootState) => state.auth);
+  const { error } = useSelector((state: RootState) => state.auth);
   
   const [formData, setFormData] = useState<FormData>({
     email: '',
@@ -47,6 +47,7 @@ const Login: React.FC = () => {
   
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
+  const [buttonLoading, setButtonLoading] = useState(false);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -54,8 +55,6 @@ const Login: React.FC = () => {
       ...formData,
       [name]: value,
     });
-    
-    // Reset errore specifico quando l'utente inizia a digitare
     if (formErrors[name as keyof FormErrors]) {
       setFormErrors({
         ...formErrors,
@@ -66,36 +65,38 @@ const Login: React.FC = () => {
   
   const validateForm = (): boolean => {
     const errors: FormErrors = {};
-    
-    // Validazione email
     if (!formData.email) {
       errors.email = 'L\'email è obbligatoria';
     } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
       errors.email = 'Email non valida';
     }
-    
-    // Validazione password
     if (!formData.password) {
       errors.password = 'La password è obbligatoria';
     }
-    
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
   
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    
     if (!validateForm()) return;
-    
+    setButtonLoading(true);
     try {
       const result = await dispatch(login(formData.email, formData.password));
-      // Indipendentemente dallo stato di verifica, vai in dashboard 
+      console.log(result);
+      
       if (result.success) {
-        navigate('/dashboard');
+        if (!result.isEmailVerified) {
+          // Always redirect to waiting-verification if email is not verified
+          navigate('/auth/waiting-verification', { state: { email: formData.email } });
+        } else {
+          navigate('/dashboard');
+        }
       }
     } catch (error) {
       console.error('Login error:', error);
+    } finally {
+      setButtonLoading(false);
     }
   };
   
@@ -207,9 +208,9 @@ const Login: React.FC = () => {
             fullWidth
             variant="contained"
             sx={{ mt: 3 }}
-            disabled={isLoading}
+            disabled={buttonLoading}
           >
-            {isLoading ? <CircularProgress size={24} /> : 'Accedi'}
+            {buttonLoading ? <CircularProgress size={24} /> : 'Accedi'}
           </Button>
           
           <Box sx={{ mt: 3, mb: 2 }}>
@@ -226,7 +227,7 @@ const Login: React.FC = () => {
               variant="outlined"
               startIcon={<GoogleIcon />}
               onClick={handleGoogleLogin}
-              disabled={isLoading}
+              disabled={buttonLoading}
             >
               Google
             </Button>
@@ -235,7 +236,7 @@ const Login: React.FC = () => {
               variant="outlined"
               startIcon={<AppleIcon />}
               onClick={handleAppleLogin}
-              disabled={isLoading}
+              disabled={buttonLoading}
             >
               Apple
             </Button>

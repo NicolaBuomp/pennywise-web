@@ -1,16 +1,29 @@
-import React from 'react';
-import { Typography, Box, Paper, Grid } from '@mui/material';
+import React, { useEffect } from 'react';
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { Box, Typography, Paper, Grid } from '@mui/material';
 import { RootState } from '../../redux/store';
+import EmailVerificationBanner from '../../components/common/EmailVerificationBanner';
 
 const Dashboard: React.FC = () => {
   const { user, isEmailVerified } = useSelector((state: RootState) => state.auth);
+  const navigate = useNavigate();
+  
+  // Redirect unverified users to waiting-verification page
+  useEffect(() => {
+    if (user && !isEmailVerified) {
+      navigate('/auth/waiting-verification', { state: { email: user.email } });
+    }
+  }, [user, isEmailVerified, navigate]);
   
   return (
     <Box>
       <Typography variant="h4" gutterBottom>
         Dashboard
       </Typography>
+      
+      {/* Show banner for unverified users (as a fallback) */}
+      <EmailVerificationBanner displayMode="always" />
       
       <Paper sx={{ p: 3, mb: 3 }}>
         <Typography variant="h6" gutterBottom>
