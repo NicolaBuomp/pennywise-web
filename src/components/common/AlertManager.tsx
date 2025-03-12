@@ -1,62 +1,36 @@
 import React from 'react';
+import { Alert, Snackbar } from '@mui/material';
 import { useSelector, useDispatch } from 'react-redux';
-import { Snackbar, Alert } from '@mui/material';
-
 import { RootState } from '../../redux/store';
-import { removeAlert } from '../../redux/slices/uiSlice';
+import { hideAlert } from '../../redux/slices/alertSlice';
 
-/**
- * Componente per la gestione centralizzata degli alert nell'applicazione
- * Mostra gli alert in coda e li rimuove dopo il tempo specificato
- */
 const AlertManager: React.FC = () => {
+  const { open, message, severity, autoHideDuration } = useSelector((state: RootState) => state.alert);
   const dispatch = useDispatch();
-  const alerts = useSelector((state: RootState) => state.ui.alerts);
 
-  /**
-   * Gestisce la chiusura di un alert
-   * @param id - ID dell'alert da chiudere
-   */
-  const handleClose = (id: number): void => {
-    dispatch(removeAlert(id));
-  };
-
-  /**
-   * Gestisce la chiusura automatica di un alert allo scadere del timer
-   * @param id - ID dell'alert da chiudere
-   */
-  const handleAutoClose = (_event: React.SyntheticEvent | Event, reason?: string, id?: number): void => {
-    if (reason === 'clickaway' || !id) {
+  const handleClose = (event?: React.SyntheticEvent | Event, reason?: string) => {
+    if (reason === 'clickaway') {
       return;
     }
-    
-    dispatch(removeAlert(id));
+    dispatch(hideAlert());
   };
 
-  if (alerts.length === 0) return null;
-
   return (
-    <div>
-      {alerts.map((alert) => (
-        <Snackbar
-          key={alert.id}
-          open={true}
-          autoHideDuration={alert.autoHideDuration || 5000}
-          onClose={(event, reason) => handleAutoClose(event, reason, alert.id)}
-          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-          sx={{ mt: 8, mr: 2 }} // Per evitare sovrapposizioni con AppBar
-        >
-          <Alert
-            onClose={() => handleClose(alert.id)}
-            severity={alert.type}
-            variant="filled"
-            sx={{ width: '100%' }}
-          >
-            {alert.message}
-          </Alert>
-        </Snackbar>
-      ))}
-    </div>
+    <Snackbar
+      open={open}
+      autoHideDuration={autoHideDuration}
+      onClose={handleClose}
+      anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
+    >
+      <Alert
+        onClose={handleClose}
+        severity={severity}
+        variant="filled"
+        sx={{ width: '100%' }}
+      >
+        {message}
+      </Alert>
+    </Snackbar>
   );
 };
 

@@ -1,6 +1,11 @@
 import { User } from '../redux/slices/authSlice';
 import supabase from '../supabaseClient';
 
+// Caching per ridurre le chiamate API
+let userCache = null;
+let userCacheTimestamp = 0;
+const CACHE_TTL = 60000; // 1 minuto di cache
+
 // Interfaccia per i dati aggiuntivi dell'utente durante la registrazione
 export interface UserData {
   displayName?: string;
@@ -176,6 +181,8 @@ export const authService = {
    */
   logout: async () => {
     const { error } = await supabase.auth.signOut();
+    // Invalida la cache al logout
+    authService.invalidateUserCache();
     if (error) throw error;
   },
 
@@ -190,13 +197,27 @@ export const authService = {
   },
 
   /**
-   * Recupera l'utente corrente
+   * Recupera l'utente corrente con sistema di cache
    * @returns Dati utente o null
    */
   getCurrentUser: async () => {
+    const now = Date.now();
+    
+    // Se abbiamo i dati in cache e sono recenti, usiamo quelli
+    if (userCache && (now - userCacheTimestamp < CACHE_TTL)) {
+      console.log("Returning cached user data");
+      return userCache;
+    }
+    
+    // Altrimenti facciamo una nuova richiesta
     const { data } = await supabase.auth.getUser();
-    console.log("authService.getCurrentUser -> getUser:", data.user); // log per debug
-    if (!data.user) return null;
+    console.log("authService.getCurrentUser -> getUser:", data.user);
+    
+    if (!data.user) {
+      userCache = null;
+      userCacheTimestamp = now;
+      return null;
+    }
     
     const { data: userData, error } = await supabase
       .from('users')
@@ -204,14 +225,24 @@ export const authService = {
       .eq('id', data.user.id)
       .single();
     
-    console.log("authService.getCurrentUser -> DB userData:", userData); // log per debug
+    console.log("authService.getCurrentUser -> DB userData:", userData);
       
     if (error) {
       console.error("Error fetching user data from DB:", error);
       throw error;
     }
     
-    return userData as User;
+    // Aggiorna la cache
+    userCache = userData as User;
+    userCacheTimestamp = now;
+    
+    return userCache;
+  },
+
+  // Aggiungi un metodo per invalidare la cache quando necessario
+  invalidateUserCache: () => {
+    userCache = null;
+    userCacheTimestamp = 0;
   },
 
   /**
@@ -274,6 +305,9 @@ export const authService = {
       .single();
 
     if (profileError) throw profileError;
+    
+    // Invalida la cache dopo l'aggiornamento del profilo
+    authService.invalidateUserCache();
     return profileData as User;
   },
 

@@ -1,12 +1,14 @@
 import supabase from '../supabaseClient';
+import store from '../redux/store';
 
 /**
- * Verifica se l'email dell'utente è verificata
- * @returns {Promise<boolean>}
+ * Verifica se l'email dell'utente è verificata utilizzando lo stato Redux
+ * @returns {boolean}
  */
-const checkIsEmailVerified = async () => {
-  const { data: userData } = await supabase.auth.getUser();
-  return !!userData.user?.email_confirmed_at;
+const checkIsEmailVerified = () => {
+  // Usa lo stato Redux invece di fare una chiamata API
+  const state = store.getState();
+  return state.auth.isEmailVerified;
 };
 
 /**
@@ -18,31 +20,41 @@ export const groupService = {
    * @returns {Promise<Array>} Lista dei gruppi
    */
   getUserGroups: async () => {
-    // Verifica se l'email è verificata
-    const isVerified = await checkIsEmailVerified();
-    if (!isVerified) {
-      throw new Error('Email non verificata. Verifica la tua email per accedere a questa funzionalità.');
+    try {
+      // 1. Prima otteniamo le appartenenze ai gruppi dell'utente
+      const { data: memberships, error: membershipError } = await supabase
+        .from('group_members')
+        .select('id, role, joined_at, group_id')
+        .order('joined_at', { ascending: false });
+
+      if (membershipError) throw membershipError;
+      if (!memberships || memberships.length === 0) return [];
+
+      // 2. Otteniamo le informazioni complete sui gruppi in una query separata
+      const groupIds = memberships.map(membership => membership.group_id);
+      const { data: groups, error: groupsError } = await supabase
+        .from('groups')
+        .select('*')
+        .in('id', groupIds);
+
+      if (groupsError) throw groupsError;
+
+      // 3. Combiniamo i risultati
+      return groups.map(group => {
+        const membership = memberships.find(m => m.group_id === group.id);
+        return {
+          ...group,
+          membership: {
+            id: membership?.id,
+            role: membership?.role,
+            joined_at: membership?.joined_at
+          }
+        };
+      });
+    } catch (error) {
+      console.error('Errore nel caricamento dei gruppi:', error);
+      throw error;
     }
-
-    const { data, error } = await supabase
-      .from('group_members')
-      .select(`
-        id,
-        role,
-        joined_at,
-        group:groups(*)
-      `)
-      .order('joined_at', { ascending: false });
-
-    if (error) throw error;
-    return data.map(membership => ({
-      ...membership.group,
-      membership: {
-        id: membership.id,
-        role: membership.role,
-        joined_at: membership.joined_at
-      }
-    }));
   },
 
   /**
@@ -350,11 +362,7 @@ export const groupService = {
    * @returns {Promise<boolean>} true se admin
    */
   isGroupAdmin: async (groupId) => {
-    // Verifica se l'email è verificata
-    const isVerified = await checkIsEmailVerified();
-    if (!isVerified) {
-      throw new Error('Email non verificata. Verifica la tua email per accedere a questa funzionalità.');
-    }
+    // Rimosso controllo ridondante sulla verifica email
 
     const userId = (await supabase.auth.getUser()).data.user.id;
     

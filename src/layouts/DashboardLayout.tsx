@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
 import { 
   Box, 
   Drawer, 
@@ -9,15 +10,20 @@ import {
   Typography,
   useTheme,
   useMediaQuery,
-  styled
+  styled,
+  Button,
+  Divider
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import LogoutIcon from '@mui/icons-material/Logout';
 
 import Sidebar from '../components/dashboard/Sidebar';
 import EmailVerificationBanner from '../components/common/EmailVerificationBanner';
 import { useSelector } from 'react-redux';
 import { RootState } from '../redux/store';
+import { logout } from '../redux/thunks/authThunks';
+import { AppDispatch } from '../redux/store';
 
 // Constants
 const DRAWER_WIDTH = 260; // Width of sidebar when open
@@ -89,6 +95,8 @@ const DashboardLayout: React.FC = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const [drawerOpen, setDrawerOpen] = useState(!isMobile);
   const { isEmailVerified } = useSelector((state: RootState) => state.auth);
+  const dispatch = useDispatch<AppDispatch>();
+  const navigate = useNavigate();
 
   const handleDrawerToggle = () => {
     setDrawerOpen(!drawerOpen);
@@ -98,6 +106,16 @@ const DashboardLayout: React.FC = () => {
   const handleMenuClick = () => {
     if (isMobile) {
       setDrawerOpen(false);
+    }
+  };
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      await dispatch(logout());
+      navigate('/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
     }
   };
 
@@ -150,6 +168,18 @@ const DashboardLayout: React.FC = () => {
         >
           <Toolbar /> {/* Space for AppBar */}
           <Sidebar onMenuItemClick={handleMenuClick} />
+          <Box sx={{ mt: 'auto', mb: 2, px: 2 }}>
+            <Divider sx={{ mb: 2 }} />
+            <Button
+              fullWidth
+              variant="outlined"
+              color="error"
+              startIcon={<LogoutIcon />}
+              onClick={handleLogout}
+            >
+              Logout
+            </Button>
+          </Box>
         </Drawer>
       ) : (
         // Desktop version: persistent drawer
@@ -159,6 +189,18 @@ const DashboardLayout: React.FC = () => {
         >
           <Toolbar /> {/* Space for AppBar */}
           <Sidebar onMenuItemClick={handleMenuClick} />
+          <Box sx={{ mt: 'auto', mb: 2, px: 2 }}>
+            <Divider sx={{ mb: 2 }} />
+            <Button
+              fullWidth
+              variant="outlined"
+              color="error"
+              startIcon={<LogoutIcon />}
+              onClick={handleLogout}
+            >
+              Logout
+            </Button>
+          </Box>
         </StyledDrawer>
       )}
 

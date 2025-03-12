@@ -24,11 +24,11 @@ const ConfirmEmail: React.FC = () => {
         // Verifica se c'è un token nell'URL
         const token = searchParams.get('token');
         
-        // Check with Supabase if the email is verified
+        // Un solo tentativo di verifica iniziale
         const isVerified = await dispatch(checkEmailVerification());
         
         if (isVerified) {
-          // Imposta esplicitamente lo stato di verifica
+          // Email verificata con successo
           dispatch(setEmailVerified(true));
           setSuccess(true);
           
@@ -46,36 +46,12 @@ const ConfirmEmail: React.FC = () => {
           
           return () => clearInterval(intervalId);
         } else if (token) {
-          // Se abbiamo un token ma isVerified è false, potrebbe esserci un ritardo
-          // nella propagazione dello stato di verifica
-          setTimeout(() => {
-            dispatch(checkEmailVerification()).then(verified => {
-              if (verified) {
-                dispatch(setEmailVerified(true));
-                setSuccess(true);
-                
-                // Start countdown for redirect if verified on second attempt
-                const intervalId = setInterval(() => {
-                  setCountdown(prevCount => {
-                    if (prevCount <= 1) {
-                      clearInterval(intervalId);
-                      navigate('/dashboard');
-                      return 0;
-                    }
-                    return prevCount - 1;
-                  });
-                }, 1000);
-                
-                return () => clearInterval(intervalId);
-              } else {
-                setError("L'email non risulta ancora verificata. Potrebbe essere necessario attendere qualche minuto.");
-              }
-              setIsLoading(false);
-            });
-          }, 2000);
-          return; // Ferma l'esecuzione qui per evitare di impostare isLoading = false troppo presto
+          // Se abbiamo un token ma la verifica non è ancora confermata,
+          // potremmo essere in un caso di latenza nella propagazione dell'aggiornamento
+          // Invece di fare polling, mostriamo un messaggio informativo
+          setError("La verifica dell'email è in corso. Potrebbe richiedere qualche minuto. Riprova ad accedere tra poco.");
         } else {
-          throw new Error("L'email non risulta ancora verificata. Riprova più tardi.");
+          throw new Error("Nessun token di verifica trovato nell'URL.");
         }
       } catch (error: any) {
         setError(error.message || `Errore durante la verifica dell'email`);

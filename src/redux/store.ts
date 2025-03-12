@@ -1,39 +1,41 @@
+// src/redux/store.ts
 import { configureStore } from '@reduxjs/toolkit';
 import { combineReducers } from 'redux';
 import { persistStore, persistReducer, FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER } from 'redux-persist';
 import storage from 'redux-persist/lib/storage';
 
-// Importazione dei reducer
+// Import reducers
 import authReducer from './slices/authSlice';
 import uiReducer from './slices/uiSlice';
-// Altri reducer verranno importati in seguito
+import themeReducer from './slices/themeSlice'; // Added import
+import alertReducer from './slices/alertSlice';
 
-// Configurazione redux-persist
+// redux-persist configuration
 const persistConfig = {
   key: 'root',
   storage,
-  whitelist: ['auth', 'ui'] // Solo questi reducer verranno persistiti
+  whitelist: ['auth', 'ui', 'theme'] // Added 'theme' to persist
 };
 
-// Combinazione dei reducer
+// Combine reducers
 const rootReducer = combineReducers({
   auth: authReducer,
   ui: uiReducer,
-  // Altri reducer verranno aggiunti in seguito
+  theme: themeReducer,
+  alert: alertReducer,
+  // Others will be added later
 });
 
-// Creazione del reducer persistente
+// Create persisted reducer
 const persistedReducer = persistReducer(persistConfig, rootReducer);
 
-// Configurazione dello store
+// Configure store
 export const store = configureStore({
   reducer: persistedReducer,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
-        // Ignore le azioni di redux-persist che non sono serializzabili
         ignoredActions: [FLUSH, REHYDRATE, PAUSE, PERSIST, PURGE, REGISTER],
-        // Ignore alcuni path specifici che contengono Date o altri valori non serializzabili
         ignoredPaths: [
           'auth.user.createdAt',
           'auth.user.updatedAt',
@@ -42,10 +44,7 @@ export const store = configureStore({
     }),
 });
 
-// Creazione del persistor
 export const persistor = persistStore(store);
-
-// Esportazione dei tipi per TypeScript
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
 

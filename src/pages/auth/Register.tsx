@@ -46,7 +46,7 @@ const Register: React.FC = () => {
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [formErrors, setFormErrors] = useState<FormErrors>({})
-  const { isLoading, error } = useSelector((state: RootState) => state.auth);
+  const { error } = useSelector((state: RootState) => state.auth);
   
   const [formData, setFormData] = useState<FormData>({
     displayName: 'Admin',
@@ -56,6 +56,7 @@ const Register: React.FC = () => {
     confirmPassword: 'Admin123!!',
   });
   const [buttonLoading, setButtonLoading] = useState(false);
+  const [providerLoading, setProviderLoading] = useState<string | null>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -117,22 +118,30 @@ const Register: React.FC = () => {
     } catch (error: any) {
       console.error("Registration error:", error);
       // The error is already handled in the reducer
+    } finally {
+      setButtonLoading(false);
     }
   };
 
   const handleGoogleLogin = async () => {
     try {
+      setProviderLoading('google');
       await dispatch(loginWithProvider('google'));
     } catch (error) {
       // Errore già gestito nel reducer
+    } finally {
+      setProviderLoading(null);
     }
   };
 
   const handleAppleLogin = async () => {
     try {
+      setProviderLoading('apple');
       await dispatch(loginWithProvider('apple'));
     } catch (error) {
       // Errore già gestito nel reducer
+    } finally {
+      setProviderLoading(null);
     }
   };
 
@@ -264,7 +273,7 @@ const Register: React.FC = () => {
             fullWidth
             variant="contained"
             sx={{ mt: 3 }}
-            disabled={buttonLoading}
+            disabled={buttonLoading || !!providerLoading}
           >
             {buttonLoading ? <CircularProgress size={24} /> : 'Registrati'}
           </Button>
@@ -281,18 +290,18 @@ const Register: React.FC = () => {
             <Button
               fullWidth
               variant="outlined"
-              startIcon={<GoogleIcon />}
+              startIcon={providerLoading === 'google' ? <CircularProgress size={20} /> : <GoogleIcon />}
               onClick={handleGoogleLogin}
-              disabled={buttonLoading}
+              disabled={buttonLoading || !!providerLoading}
             >
               Google
             </Button>
             <Button
               fullWidth
               variant="outlined"
-              startIcon={<AppleIcon />}
+              startIcon={providerLoading === 'apple' ? <CircularProgress size={20} /> : <AppleIcon />}
               onClick={handleAppleLogin}
-              disabled={buttonLoading}
+              disabled={buttonLoading || !!providerLoading}
             >
               Apple
             </Button>

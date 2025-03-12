@@ -48,6 +48,7 @@ const Login: React.FC = () => {
   const [showPassword, setShowPassword] = useState<boolean>(false);
   const [formErrors, setFormErrors] = useState<FormErrors>({});
   const [submitting, setSubmitting] = useState<boolean>(false);
+  const [providerLoading, setProviderLoading] = useState<string | null>(null);
   const [errors, setErrors] = useState<string | null>(null);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -120,17 +121,23 @@ const Login: React.FC = () => {
   
   const handleGoogleLogin = async () => {
     try {
+      setProviderLoading('google');
       await dispatch(loginWithProvider('google'));
     } catch (error) {
       // Errore già gestito nel reducer
+    } finally {
+      setProviderLoading(null);
     }
   };
   
   const handleAppleLogin = async () => {
     try {
+      setProviderLoading('apple');
       await dispatch(loginWithProvider('apple'));
     } catch (error) {
       // Errore già gestito nel reducer
+    } finally {
+      setProviderLoading(null);
     }
   };
   
@@ -226,8 +233,9 @@ const Login: React.FC = () => {
             fullWidth
             variant="contained"
             sx={{ mt: 3 }}
+            disabled={submitting}
           >
-            { 'Accedi'}
+            {submitting ? <CircularProgress size={24} /> : 'Accedi'}
           </Button>
           
           <Box sx={{ mt: 3, mb: 2 }}>
@@ -242,16 +250,18 @@ const Login: React.FC = () => {
             <Button
               fullWidth
               variant="outlined"
-              startIcon={<GoogleIcon />}
+              startIcon={providerLoading === 'google' ? <CircularProgress size={20} /> : <GoogleIcon />}
               onClick={handleGoogleLogin}
+              disabled={!!providerLoading}
             >
               Google
             </Button>
             <Button
               fullWidth
               variant="outlined"
-              startIcon={<AppleIcon />}
+              startIcon={providerLoading === 'apple' ? <CircularProgress size={20} /> : <AppleIcon />}
               onClick={handleAppleLogin}
+              disabled={!!providerLoading}
             >
               Apple
             </Button>

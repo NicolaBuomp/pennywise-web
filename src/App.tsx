@@ -22,6 +22,11 @@ import WaitingVerification from './pages/auth/WaitingVerification';
 // Dashboard Pages
 import Dashboard from './pages/dashboard/Dashboard';
 
+// Gruppi
+import Groups from './pages/groups/Groups';
+import GroupDetail from './pages/groups/GroupDetail';
+import JoinGroup from './pages/groups/JoinGroup';
+
 // Redux
 import { AppDispatch, RootState } from './redux/store';
 import { checkAuthState } from './redux/thunks/authThunks';
@@ -85,6 +90,11 @@ const App: React.FC = () => {
             >
               <Route path="/" element={<Navigate to="/dashboard" />} />
               <Route path="/dashboard" element={<Dashboard />} />
+              
+              {/* Rotte gruppi */}
+              <Route path="/groups" element={<Groups />} />
+              <Route path="/groups/:id" element={<GroupDetail />} />
+              <Route path="/join-group/:token" element={<JoinGroup />} />
             </Route>
             <Route path="*" element={<Navigate to="/" />} />
           </Routes>
